@@ -23,5 +23,9 @@ public class FrotasController {
     public String veiculo(){
         return "cadastrar-veiculo";
     }
+    @GetMapping("/manutencao")
+    public String manutencao(){
+        return "/cadastrar-manutencao";
+    }
 
 }
