@@ -1,0 +1,26 @@
+body {
+      margin: 0;
+      height: 100vh;
+      background-color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-img {
+      width: 700px; /* ajuste aqui o tamanho desejado */
+      max-width: 90vw;
+      height: 500px;
+      transition: width 0.3s ease;
+    }
+
+    .logo-img:hover {
+      width: 350px; /* exemplo de efeito ao passar o mouse */
+    }
+    #header{
+    width: 100%;
+    position: fixed;
+    top: 0;
+    z-index: 1030;
+
+}
