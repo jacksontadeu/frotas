@@ -8,14 +8,14 @@ body {
     }
 
     .logo-img {
-      width: 700px; /* ajuste aqui o tamanho desejado */
+      width: 700px;
       max-width: 90vw;
       height: 500px;
       transition: width 0.3s ease;
     }
 
     .logo-img:hover {
-      width: 350px; /* exemplo de efeito ao passar o mouse */
+      width: 350px;
     }
     #header{
     width: 100%;
