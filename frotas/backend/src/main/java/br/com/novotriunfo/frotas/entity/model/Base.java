@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,8 +18,7 @@ public class Base {
     private String nome;
     private String localidade;
 
-    @ManyToOne
-    @JoinColumn(name = "veiculos_id")
-    private Veiculo veiculos;
+    @OneToMany(mappedBy = ("base"))
+    private List<Veiculo> veiculos;
 
 }

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cadastro de Veículo - Novo Triunfo</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:ref="/veiculo/veiculo.css" href="/veiculo/veiculo.css">
+    <link rel="stylesheet" href="/tema/tema.css">
+
+
+</head>
+<body class="light-mode">
+
+<header id="header">
+    <div th:insert="fragments/header :: cabecalho-principal"></div>
+    <button class="btn btn-secondary position-fixed top-0 end-0 m-3" onclick="toggleTheme()">Alternar Tema</button>
+
+</header>
+
+<div class="form-container">
+    <h2 class="text-center mb-4">Cadastro de Veículo</h2>
+    <form action="/cadastrarVeiculo" method="post">
+        <div class="mb-3">
+            <label for="nome" class="form-label">Nome</label>
+            <input type="text" class="form-control" name="nome" id="nome" placeholder="Digite o nome do veículo" required>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="placa" class="form-label">Placa do Veículo</label>
+                <input type="text" class="form-control" name="placaVeiculo" id="placa" placeholder="Ex: ABC1234" required>
+            </div>
+            <div class="col-md-6">
+                <label for="frota" class="form-label">Frota</label>
+                <input type="text" class="form-control" name="frota" id="frota" placeholder="Digite o número da frota" required>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="cor" class="form-label">Cor do Veículo</label>
+                <input type="text" class="form-control" name="cor" id="cor" placeholder="Digite a cor do veículo" required>
+            </div>
+            <div class="col-md-6">
+                <label for="ano" class="form-label">Ano de Fabricação</label>
+                <input type="number" class="form-control" name="anoDeFabricacao" id="ano" placeholder="Ex: 2020" required>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="base" class="form-label">Base</label>
+                <div class="input-group">
+                    <select id="base" name="base_id" class="form-control" required>
+                        <option value="">Selecione a base</option>
+                        <option th:each="base : ${bases}"
+                                th:value="${base.id}"
+                                th:text="${base.nome}" >
+                        </option>
+                    </select>
+
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label for="tipo" class="form-label">Tipo do Veículo</label>
+                <select id="tipo" name="tipoVeiculo" class="form-control" required>
+                    <option th:each="tipo : ${T(br.com.novotriunfo.frotas.entities.enums.TipoVeiculo).values()}"
+                            th:value="${tipo}" th:text="${tipo}" >
+                    </option>
+                </select>
+            </div>
+        </div>
+
+
+        <button type="submit" class="btn btn-primary w-100">Cadastrar</button>
+    </form>
+</div>
+
+<script src="/tema/tema.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

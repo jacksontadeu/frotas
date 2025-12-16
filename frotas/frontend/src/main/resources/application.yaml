@@ -5,3 +5,5 @@ server:
 spring:
   application:
     name: frotas
+  feign:
+    url: http://localhost:8080

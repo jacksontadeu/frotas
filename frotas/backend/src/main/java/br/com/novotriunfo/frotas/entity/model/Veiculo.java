@@ -16,11 +16,12 @@ public class Veiculo {
     private Long id;
     private String nome;
     private String frota;
-
-    @OneToOne
-    @JoinColumn(name = "base_id")
-    private Base base;
-
+    private String placaVeiculo;
+    private String cor;
+    private String anoDeFabricacao;
     @Enumerated(EnumType.STRING)
     private TipoVeiculo tipoVeiculo;
+    @ManyToOne
+    @JoinColumn(name = "base_id")
+    private Base base;
 }
