@@ -6,6 +6,7 @@ import br.com.novotriunfo.frotas.repository.VeiculoRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class VeiculoService {
@@ -21,5 +22,9 @@ public class VeiculoService {
     }
     public List<Veiculo> listarTodos(){
         return veiculoRepository.findAll();
+    }
+    public Optional<Veiculo> buscarPorId(Long id){
+        return Optional.ofNullable(veiculoRepository.findById(id).orElse(null));
+
     }
 }

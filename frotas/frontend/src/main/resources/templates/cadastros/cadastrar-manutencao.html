@@ -1,56 +1,128 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Cadastro de Manutenções</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" th:ref="/manutencao/manutencao.css" href="/manutencao/manutencao.css">
-  <link rel="stylesheet" href="/tema/tema.css">
-
-
+    <meta charset="UTF-8">
+    <title>Cadastro de Manutenções</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/tema/tema.css">
+    <style>
+        /* Centralizar container na tela */
+        .center-container {
+          min-height: 100vh; /* altura total da tela */
+          display: flex;
+          justify-content: center; /* horizontal */
+          align-items: center;     /* vertical */
+        }
+        .form-container {
+          background-color: #f8f9fa; /* cor de fundo clara */
+          padding: 2rem;
+          border-radius: 10px;
+          box-shadow: 0 0 10px rgba(0,0,0,0.2);
+          width: 100%;
+          max-width: 500px; /* largura máxima */
+        }
+    </style>
 </head>
 <body class="light-mode">
 
-  <header id="header">
+<header id="header">
     <div th:insert="fragments/header :: cabecalho-principal"></div>
     <button class="btn btn-secondary position-fixed top-0 end-0 m-3" onclick="toggleTheme()">Alternar Tema</button>
+</header>
 
-  </header>
+<!-- Container centralizado -->
+<div class="center-container">
+    <div class="form-container">
+        <h2 class="text-center mb-4">Cadastro de Manutenções</h2>
+        <form>
+            <!-- Placa com modal -->
+            <div class="mb-3">
+                <label for="placa" class="form-label">Placa do Veículo</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="placa" name="placa" placeholder="Digite a placa do veículo" required>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalPlaca">
+                        <i class="bi bi-search"></i> Pesquisar
+                    </button>
+                </div>
+            </div>
 
-   <div class="form-container">
-    <h2 class="text-center mb-4">Cadastro de Manutenções</h2>
-    <form>
-      <div class="mb-3">
-        <label for="veiculo" class="form-label">Veículo</label>
-        <div class="input-group">
-          <input type="text" class="form-control" id="veiculo" name="veiculo" placeholder="Digite o nome do veículo" required>
-          <button type="button" class="btn btn-primary">Pesquisar</button>
+            <!-- Quilometragem -->
+            <div class="mb-3">
+                <label for="km" class="form-label">Quilometragem</label>
+                <input type="number" class="form-control" id="km" name="km" placeholder="Digite a quilometragem atual" required>
+            </div>
+
+            <!-- Datas -->
+            <div class="mb-3">
+                <label for="dataPreventiva" class="form-label">Data da Preventiva</label>
+                <input type="date" class="form-control" id="dataPreventiva" name="dataPreventiva" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="dataProxima" class="form-label">Data da Próxima Preventiva</label>
+                <input type="date" class="form-control" id="dataProxima" name="dataProxima" required>
+            </div>
+
+            <!-- Tipo de manutenção -->
+            <div class="mb-3">
+                <label for="tipoManutencao" class="form-label">Tipo de Manutenção</label>
+                <select class="form-select" id="tipoManutencao" name="tipoManutencao" required>
+                    <option value="">Selecione o tipo</option>
+                    <option value="preventiva">Preventiva</option>
+                    <option value="corretiva">Corretiva</option>
+                    <option value="inspecao">Inspeção</option>
+                </select>
+            </div>
+
+            <!-- Botão -->
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary w-100">Cadastrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="modalPlaca" tabindex="-1" aria-labelledby="modalPlacaLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="modalPlacaLabel">Pesquisar Veículo por Placa</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <label for="placaBusca" class="form-label">Digite a placa:</label>
+                <input type="text" class="form-control" id="placaBusca" placeholder="Ex: ABC-1234">
+                <div id="mensagemErro"></div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="buscarPlaca()">Pesquisar</button>
+            </div>
         </div>
-      </div>
+    </div>
+</div>
 
-      <div class="mb-3">
-        <label for="base" class="form-label">Base do Veículo</label>
-        <input type="text" class="form-control" id="base" name="base" placeholder="Digite a base do veículo" required>
-      </div>
-
-      <div class="mb-3">
-        <label for="dataUltima" class="form-label">Data da Última Preventiva</label>
-        <input type="date" class="form-control" id="dataUltima" name="dataUltima" required>
-      </div>
-
-      <div class="mb-3">
-        <label for="dataProxima" class="form-label">Data da Próxima Preventiva</label>
-        <input type="date" class="form-control" id="dataProxima" name="dataProxima" required>
-      </div>
-
-      <div class="text-center">
-        <button type="submit" class="btn btn-primary w-100">Cadastrar</button>
-      </div>
-    </form>
-  </div>
 <script src="/tema/tema.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const bancoDeDados = ["ABC-1234", "XYZ-9876", "JKL-4567"];
+    function buscarPlaca() {
+      const placa = document.getElementById("placaBusca").value.trim().toUpperCase();
+      const mensagemErro = document.getElementById("mensagemErro");
+      if (placa) {
+        if (bancoDeDados.includes(placa)) {
+          document.getElementById("placa").value = placa;
+          mensagemErro.innerHTML = "";
+          const modal = bootstrap.Modal.getInstance(document.getElementById("modalPlaca"));
+          modal.hide();
+        } else {
+          mensagemErro.innerHTML = "<div class='alert alert-danger mt-2'>Veículo não encontrado</div>";
+        }
+      } else {
+        mensagemErro.innerHTML = "<div class='alert alert-warning mt-2'>Digite uma placa válida!</div>";
+      }
+    }
+</script>
 </body>
 </html>
-
-

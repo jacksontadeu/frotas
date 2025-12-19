@@ -1,5 +1,6 @@
 package br.com.novotriunfo.frotas.entity.dto.request;
 
+import jakarta.persistence.Column;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -19,4 +20,6 @@ public class BaseDTORequest {
     @NotBlank
     @NotNull
     private String localidade;
+    @Column(name="email_base")
+    private String emailBase;
 }

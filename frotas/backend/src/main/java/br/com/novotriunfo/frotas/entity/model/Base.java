@@ -17,6 +17,7 @@ public class Base {
     private Long id;
     private String nome;
     private String localidade;
+    private String emailBase;
 
     @OneToMany(mappedBy = ("base"))
     private List<Veiculo> veiculos;

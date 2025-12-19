@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,9 +21,15 @@ public class Veiculo {
     private String placaVeiculo;
     private String cor;
     private String anoDeFabricacao;
+
     @Enumerated(EnumType.STRING)
     private TipoVeiculo tipoVeiculo;
+
     @ManyToOne
     @JoinColumn(name = "base_id")
     private Base base;
+
+    @OneToMany(mappedBy = "veiculo")
+    private List<Manutencao> manutencoes;
+
 }

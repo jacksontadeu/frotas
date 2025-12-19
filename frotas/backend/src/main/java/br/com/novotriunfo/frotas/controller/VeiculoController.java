@@ -35,7 +35,6 @@ public class VeiculoController {
 
     @PostMapping()
     public ResponseEntity cadastrarVeiuclo(@RequestBody VeiculoDTORequest request){
-
         Veiculo veiculo = modelMapper.map(request, Veiculo.class);
         Optional<Base> base = baseService.buscarPorId(request.getBase_id());
         veiculo.setBase(base.get());
@@ -47,5 +46,14 @@ public class VeiculoController {
         List<Veiculo> veiculos = veiculoService.listarTodos();
         List<VeiculoDTOResponse> lista = modelMapper.map(veiculos, new TypeToken<List<VeiculoDTOResponse>>(){}.getType());
         return ResponseEntity.status(HttpStatus.OK).body(lista);
+    }
+    @GetMapping("/{id}")
+    public ResponseEntity<VeiculoDTOResponse> buscarPorId(@PathVariable Long id){
+        Optional<Veiculo> veiculoEntity = veiculoService.buscarPorId(id);
+        if(veiculoEntity.isPresent()){
+            VeiculoDTOResponse veiculo = modelMapper.map(veiculoEntity, VeiculoDTOResponse.class);
+            return ResponseEntity.status(HttpStatus.OK).body(veiculo);
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 }

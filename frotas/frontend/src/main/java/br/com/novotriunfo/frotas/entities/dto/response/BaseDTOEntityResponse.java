@@ -15,5 +15,6 @@ public class BaseDTOEntityResponse {
     private Long id;
     private String nome;
     private String localidade;
+    private String emailBase;
 
 }

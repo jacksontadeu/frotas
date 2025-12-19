@@ -5,12 +5,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class BaseDTORequest {
-    private String nome;
-    private String localidade;
-    private String emailBase;
+public class ManutencaoDTORequest {
+    private LocalDate dataRealizacao;
+    private Long kilometragem;
+    private String tipoManutencao;
+    private Long veiculo_id;
 }
