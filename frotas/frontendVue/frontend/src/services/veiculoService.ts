@@ -1,0 +1,24 @@
+import api from './api'
+import type { VeiculoDTORequest, VeiculoResponse } from '../types'
+
+export const veiculoService = {
+  async cadastrar(data: VeiculoDTORequest): Promise<void> {
+    await api.post('/veiculo', data)
+  },
+
+  async listarTodos(): Promise<VeiculoResponse[]> {
+    const response = await api.get<VeiculoResponse[]>('/veiculo')
+    return response.data
+  },
+
+  async buscarPorPlaca(placa: string): Promise<VeiculoResponse | undefined> {
+    const veiculos = await this.listarTodos()
+    return veiculos.find(
+      (v) => v.placaVeiculo.toUpperCase() === placa.toUpperCase()
+    )
+  },
+
+  async excluir(id: number): Promise<void> {
+    await api.delete(`/veiculo/${id}`)
+  },
+}
