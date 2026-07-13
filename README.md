@@ -17,7 +17,7 @@
 - Spring Data
 - Spring OpenFeign
 - Spring OpenApi
-- Thymeleaf
+- Vue.js
 - Banco de Dados MySQL
 
 
