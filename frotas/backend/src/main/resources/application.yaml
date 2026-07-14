@@ -3,7 +3,7 @@ spring:
     name: frotas
 
   datasource:
-    url: jdbc:mysql://localhost:3306/frotasdb
+    url: jdbc:mysql://localhost:3307/triunfodb
     username: root
     password: admin123
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -22,3 +22,6 @@ spring:
     baseline-on-migrate: true
 
 
+jwt:
+  secret: novotriunfo-secret
+  expiration: 3600000
