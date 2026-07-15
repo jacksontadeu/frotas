@@ -31,12 +31,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authz -> authz
                         // Login liberado
                         .requestMatchers(HttpMethod.POST, "/login").permitAll()
-
-                        // Rotas de atendimento
-                        .requestMatchers("/atendimento/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMIN")
-
-                        // Rotas de dashboard
-                        .requestMatchers("/dashboard/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/usuario").permitAll()
 
                         // Swagger liberado
                         .requestMatchers(
@@ -45,6 +40,12 @@ public class SecurityConfiguration {
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
+
+                        // Rotas de atendimento
+                        .requestMatchers("/atendimento/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMIN")
+
+                        // Rotas de dashboard
+                        .requestMatchers("/dashboard/**").hasAuthority("ROLE_ADMIN")
 
                         // Vue liberado
                         .requestMatchers(
@@ -63,6 +64,7 @@ public class SecurityConfiguration {
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();

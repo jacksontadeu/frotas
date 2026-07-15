@@ -5,6 +5,7 @@ import br.com.novotriunfo.frotas.entity.model.Manutencao;
 import br.com.novotriunfo.frotas.entity.model.Veiculo;
 import br.com.novotriunfo.frotas.service.ManutencaoService;
 import br.com.novotriunfo.frotas.service.VeiculoService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("manutencao")
+@Tag(name="manutencao")
 public class ManutencaoController {
     private final ModelMapper modelMapper;
     private final ManutencaoService manutencaoService;
