@@ -104,8 +104,8 @@ frotas/
 
 3. Verifique as configurações de conexão no arquivo [application.yaml](file:///media/jackson/DEV/DEV/Novotriunfo/frotas/backend/src/main/resources/application.yaml):
    *   URL: `jdbc:mysql://localhost:3307/triunfodb`
-   *   Usuário: `root`
-   *   Senha: `admin123`
+   *   Usuário: `user`
+   *   Senha: `xxxxx`
    *(Ajuste a porta e credenciais conforme o seu ambiente local).*
 
 4. Execute o backend usando o Maven Wrapper:
