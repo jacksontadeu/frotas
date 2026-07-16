@@ -270,7 +270,7 @@ onMounted(() => document.addEventListener('keydown', handleKeydown))
 <style scoped>
 .veiculo-result {
   background: var(--color-surface-2);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(238, 130, 39, 0.3);
   border-radius: var(--radius-md);
   padding: 1rem;
   margin-top: 0.75rem;

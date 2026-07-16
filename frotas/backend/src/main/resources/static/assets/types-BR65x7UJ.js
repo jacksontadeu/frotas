@@ -1,0 +1,1 @@
+var e=[`CARRO`,`CAMINHAO`,`VAN`],t=[{value:`preventiva`,label:`Preventiva`},{value:`corretiva`,label:`Corretiva`},{value:`inspecao`,label:`Inspeção`}];export{e as n,t};

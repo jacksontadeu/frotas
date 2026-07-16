@@ -47,6 +47,29 @@ export interface VeiculoResponse {
   base: BaseResponse
 }
 
+export interface AtendimentoDTORequest {
+  trocaOleo: boolean
+  revisaoArrefecimento: boolean
+  revisaoFreios: boolean
+  embreagem: boolean
+  faroisLampadas: boolean
+}
+
+export interface ManutencaoResponse {
+  id: number
+  dataRealizacao: string
+  dataProximaManutencao: string | null
+  kilometragem: number
+  tipoManutencao: string
+  veiculo: VeiculoResponse
+  status: 'EM_ABERTO' | 'FINALIZADA'
+  trocaOleo: boolean
+  revisaoArrefecimento: boolean
+  revisaoFreios: boolean
+  embreagem: boolean
+  faroisLampadas: boolean
+}
+
 // ============================
 // Enums
 // ============================
@@ -60,3 +83,13 @@ export const TIPOS_MANUTENCAO = [
   { value: 'corretiva', label: 'Corretiva' },
   { value: 'inspecao', label: 'Inspeção' },
 ]
+
+export interface LoginDTORequest {
+  email: string
+  senha?: string
+}
+
+export interface LoginDTOResponse {
+  token: string
+}
+

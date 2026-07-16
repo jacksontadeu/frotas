@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { useTheme } from '../composables/useTheme'
+import { useAuth } from '../composables/useAuth'
 
 const { theme, toggleTheme } = useTheme()
+const { isAuthenticated, isAdmin, isTecnico, logout } = useAuth()
+const router = useRouter()
+
 const menuOpen = ref(false)
 const openDropdown = ref<string | null>(null)
 const navRef = ref<HTMLElement | null>(null)
@@ -70,6 +74,12 @@ function toggleDropdown(key: string) {
   openDropdown.value = openDropdown.value === key ? null : key
 }
 
+function handleLogout() {
+  logout()
+  router.push('/login')
+  closeMenu()
+}
+
 function handleClickOutside(event: MouseEvent) {
   if (navRef.value && !navRef.value.contains(event.target as Node)) {
     openDropdown.value = null
@@ -96,7 +106,7 @@ onUnmounted(() => {
 
 <template>
   <nav ref="navRef" class="navbar" role="navigation" aria-label="Navegação principal">
-    <RouterLink to="/" class="navbar-brand" @click="closeMenu">
+    <RouterLink :to="isTecnico ? '/atendimento' : '/'" class="navbar-brand" @click="closeMenu">
       🚛 NOVO TRIUNFO
     </RouterLink>
 
@@ -121,42 +131,54 @@ onUnmounted(() => {
 
     <div class="navbar-collapse" :class="{ show: menuOpen }">
       <ul class="navbar-nav">
-        <li class="nav-item">
-          <RouterLink to="/" class="nav-link" @click="closeMenu">
-            Início
-          </RouterLink>
-        </li>
+        <!-- Links para Administrador -->
+        <template v-if="isAdmin">
+          <li class="nav-item">
+            <RouterLink to="/" class="nav-link" @click="closeMenu">
+              Início
+            </RouterLink>
+          </li>
 
-        <li
-          v-for="section in navSections"
-          :key="section.key"
-          class="nav-item dropdown"
-          :class="{ open: openDropdown === section.key }"
-        >
-          <button
-            class="nav-link dropdown-trigger"
-            type="button"
-            :aria-expanded="openDropdown === section.key"
-            @click.stop="toggleDropdown(section.key)"
+          <li
+            v-for="section in navSections"
+            :key="section.key"
+            class="nav-item dropdown"
+            :class="{ open: openDropdown === section.key }"
           >
-            {{ section.label }}
-            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
+            <button
+              class="nav-link dropdown-trigger"
+              type="button"
+              :aria-expanded="openDropdown === section.key"
+              @click.stop="toggleDropdown(section.key)"
+            >
+              {{ section.label }}
+              <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
 
-          <ul class="dropdown-menu">
-            <li v-for="item in section.items" :key="item.to + item.label">
-              <RouterLink
-                :to="item.to"
-                class="dropdown-item"
-                @click="closeMenu"
-              >
-                {{ item.label }}
-              </RouterLink>
-            </li>
-          </ul>
-        </li>
+            <ul class="dropdown-menu">
+              <li v-for="item in section.items" :key="item.to + item.label">
+                <RouterLink
+                  :to="item.to"
+                  class="dropdown-item"
+                  @click="closeMenu"
+                >
+                  {{ item.label }}
+                </RouterLink>
+              </li>
+            </ul>
+          </li>
+        </template>
+
+        <!-- Links para Técnico -->
+        <template v-else-if="isTecnico">
+          <li class="nav-item">
+            <RouterLink to="/atendimento" class="nav-link" @click="closeMenu">
+              🔧 Atendimento
+            </RouterLink>
+          </li>
+        </template>
       </ul>
 
       <div class="navbar-actions">
@@ -167,6 +189,15 @@ onUnmounted(() => {
           @click="toggleTheme"
         >
           {{ themeIcon }}
+        </button>
+
+        <button
+          v-if="isAuthenticated"
+          class="btn-logout"
+          title="Sair do sistema"
+          @click="handleLogout"
+        >
+          🚪 Sair
         </button>
       </div>
     </div>
@@ -278,6 +309,53 @@ onUnmounted(() => {
 .light-mode .dropdown-item:hover {
   color: #000;
   background: rgba(0, 0, 0, 0.05);
+}
+
+/* -------- LOGOUT BUTTON -------- */
+.btn-logout {
+  background: rgba(220, 53, 69, 0.15);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  color: #dc3545;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-logout:hover {
+  background: #dc3545;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(220, 53, 69, 0.4);
+}
+
+.dark-mode .btn-logout {
+  background: rgba(239, 83, 80, 0.15);
+  border-color: rgba(239, 83, 80, 0.3);
+  color: #ef5350;
+}
+
+.dark-mode .btn-logout:hover {
+  background: #ef5350;
+  color: #fff;
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 767px) {
+  .navbar-actions {
+    margin-top: 1rem;
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 </style>
 

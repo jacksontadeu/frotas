@@ -78,8 +78,8 @@ const cards = [
 .hero-badge {
   display: inline-block;
   padding: 0.35rem 1rem;
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(238, 130, 39, 0.12);
+  border: 1px solid rgba(238, 130, 39, 0.3);
   border-radius: 999px;
   color: var(--accent-3);
   font-size: 0.8rem;
@@ -145,7 +145,7 @@ const cards = [
 }
 
 .quick-card:hover {
-  border-color: rgba(99, 102, 241, 0.4);
+  border-color: rgba(238, 130, 39, 0.4);
   box-shadow: var(--shadow-md), var(--shadow-glow);
   transform: translateY(-3px);
 }
