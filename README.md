@@ -17,7 +17,9 @@
 - Spring Data
 - Spring OpenFeign
 - Spring OpenApi
+- Spring Security
 - Vue.js
 - Banco de Dados MySQL
+- Oracle OCI
 
 
