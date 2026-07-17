@@ -6,19 +6,19 @@ const cards = [
     icon: '🏢',
     title: 'Bases',
     description: 'Gerencie as bases operacionais da frota.',
-    to: '/cadastros/cadastrar-base',
+    to: '/listagem/listar-bases',
   },
   {
     icon: '🚗',
     title: 'Veículos',
     description: 'Controle todos os veículos da frota.',
-    to: '/cadastros/cadastrar-veiculo',
+    to: '/listagem/listar-veiculos',
   },
   {
     icon: '🔧',
     title: 'Manutenções',
     description: 'Registre manutenções preventivas e corretivas.',
-    to: '/cadastros/cadastrar-manutencao',
+    to: '/listagem/listar-manutencoes',
   },
 ]
 </script>
