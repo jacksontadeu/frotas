@@ -21,30 +21,50 @@ const form = ref<VeiculoDTORequest>({
 const bases = ref<BaseResponse[]>([])
 const loading = ref(false)
 const loadingBases = ref(true)
-const error = ref<string | null>(null)
-const success = ref(false)
+
+// Estado do modal
+const showModal = ref(false)
+const modalType = ref<'success' | 'error'>('success')
+const modalMessage = ref('')
 
 async function carregarBases() {
   try {
     bases.value = await baseService.listarTodas()
   } catch {
-    error.value = 'Erro ao carregar bases. Verifique se o servidor está rodando.'
+    modalType.value = 'error'
+    modalMessage.value = 'Erro ao carregar bases. Verifique se o servidor está rodando.'
+    showModal.value = true
   } finally {
     loadingBases.value = false
   }
 }
 
 async function handleSubmit() {
-  error.value = null
   loading.value = true
   try {
-    await veiculoService.cadastrar(form.value)
-    success.value = true
-    setTimeout(() => router.push('/listagem/listar-veiculos'), 1500)
+    const response = await veiculoService.cadastrar(form.value)
+    modalType.value = 'success'
+    modalMessage.value = response?.message || response?.data?.message || 'Veículo cadastrado com sucesso!'
+    showModal.value = true
   } catch (e: any) {
-    error.value = e?.response?.data?.message || 'Erro ao cadastrar veículo.'
+  modalType.value = 'error'
+  modalMessage.value =
+    e?.response?.data?.message ||   // mensagem vinda do backend
+    e?.response?.data?.erro ||      // se backend usa "erro"
+    e?.response?.statusText ||      // fallback: "Forbidden"
+    e?.message ||                   // erro genérico
+    'Erro ao cadastrar veículo.'
+  showModal.value = true
+
   } finally {
     loading.value = false
+  }
+}
+
+function fecharModal() {
+  showModal.value = false
+  if (modalType.value === 'success') {
+    router.push('/listagem/listar-veiculos')
   }
 }
 
@@ -59,11 +79,6 @@ onMounted(carregarBases)
     </div>
 
     <div class="form-card" style="max-width: 680px;">
-      <div v-if="success" class="alert alert-success">
-        ✅ Veículo cadastrado com sucesso! Redirecionando...
-      </div>
-      <div v-if="error" class="alert alert-danger">⚠️ {{ error }}</div>
-
       <form @submit.prevent="handleSubmit" novalidate>
         <!-- Nome -->
         <div class="form-group">
@@ -75,7 +90,7 @@ onMounted(carregarBases)
             class="form-control"
             placeholder="Ex: Caminhão Scania R450"
             required
-            :disabled="loading || success"
+            :disabled="loading"
           />
         </div>
 
@@ -90,7 +105,7 @@ onMounted(carregarBases)
               class="form-control"
               placeholder="Ex: ABC1234"
               required
-              :disabled="loading || success"
+              :disabled="loading"
             />
           </div>
           <div class="form-group">
@@ -102,7 +117,7 @@ onMounted(carregarBases)
               class="form-control"
               placeholder="Número da frota"
               required
-              :disabled="loading || success"
+              :disabled="loading"
             />
           </div>
         </div>
@@ -118,7 +133,7 @@ onMounted(carregarBases)
               class="form-control"
               placeholder="Ex: Branco"
               required
-              :disabled="loading || success"
+              :disabled="loading"
             />
           </div>
           <div class="form-group">
@@ -132,7 +147,7 @@ onMounted(carregarBases)
               min="1900"
               :max="new Date().getFullYear() + 1"
               required
-              :disabled="loading || success"
+              :disabled="loading"
             />
           </div>
         </div>
@@ -150,7 +165,7 @@ onMounted(carregarBases)
               v-model.number="form.base_id"
               class="form-select"
               required
-              :disabled="loading || success"
+              :disabled="loading"
             >
               <option value="" disabled selected>Selecione a base</option>
               <option
@@ -169,7 +184,7 @@ onMounted(carregarBases)
               v-model="form.tipoVeiculo"
               class="form-select"
               required
-              :disabled="loading || success"
+              :disabled="loading"
             >
               <option value="" disabled selected>Selecione o tipo</option>
               <option v-for="tipo in TIPOS_VEICULO" :key="tipo" :value="tipo">
@@ -186,7 +201,7 @@ onMounted(carregarBases)
           <button
             type="submit"
             class="btn btn-primary"
-            :disabled="loading || success"
+            :disabled="loading"
           >
             <span v-if="loading">⏳ Salvando...</span>
             <span v-else>🚗 Cadastrar Veículo</span>
@@ -194,5 +209,53 @@ onMounted(carregarBases)
         </div>
       </form>
     </div>
+
+    <!-- Modal de resultado -->
+    <Teleport to="body">
+      <div v-if="showModal" class="modal-overlay" @click.self="fecharModal">
+        <div class="modal-box" :class="modalType === 'success' ? 'modal-success' : 'modal-error'">
+          <div class="modal-icon">
+            {{ modalType === 'success' ? '✅' : '⚠️' }}
+          </div>
+          <h2 class="modal-title text-center">
+            {{ modalType === 'success' ? 'Sucesso!' : 'Ocorreu um erro' }}
+          </h2>
+          <p class="modal-message">{{ modalMessage }}</p>
+          <div class="modal-actions">
+            <button class="btn btn-primary" @click="fecharModal">
+              {{ modalType === 'success' ? 'OK' : 'Fechar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
+
+<style scoped>
+.modal-icon {
+  font-size: 40px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.modal-message {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  word-break: break-word;
+  text-align: center;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.modal-success {
+  border-top: 4px solid var(--color-success);
+}
+
+.modal-error {
+  border-top: 4px solid var(--color-danger);
+}
+</style>

@@ -2,8 +2,9 @@ import api from './api'
 import type { VeiculoDTORequest, VeiculoResponse } from '../types'
 
 export const veiculoService = {
-  async cadastrar(data: VeiculoDTORequest): Promise<void> {
-    await api.post('/veiculo', data)
+  async cadastrar(data: VeiculoDTORequest): Promise<any> {
+    const response= await api.post('/veiculo', data)
+    return response.data;
   },
 
   async listarTodos(): Promise<VeiculoResponse[]> {

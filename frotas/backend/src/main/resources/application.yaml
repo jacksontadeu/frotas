@@ -25,3 +25,8 @@ spring:
 jwt:
   secret: novotriunfo-secret
   expiration: 3600000
+
+server:
+  error:
+    include-message: always
+    include-binding-errors: always

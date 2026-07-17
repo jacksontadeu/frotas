@@ -45,7 +45,10 @@ public class SecurityConfiguration {
                         .requestMatchers("/atendimento/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMIN")
 
                         // Rotas de dashboard
-                        .requestMatchers("/dashboard/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/veiculo/**").hasAuthority("ADMIN")
+                        .requestMatchers("/base/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/manutencao/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/cadastros/**").hasAuthority("ROLE_ADMIN")
 
                         // Vue liberado
                         .requestMatchers(
