@@ -2,6 +2,7 @@ package br.com.novotriunfo.frotas.security;
 
 import br.com.novotriunfo.frotas.entity.model.Usuario;
 import com.auth0.jwt.JWT;
+import com.auth0.jwt.exceptions.JWTCreationException;
 import org.flywaydb.core.internal.license.FlywayJWTValidationException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -30,7 +31,7 @@ public class TokenService {
                     .withExpiresAt(new Date(System.currentTimeMillis() + 3600000)) // 24 horas
                     .sign(algoritmo);
             return token;
-        } catch (FlywayJWTValidationException e) {
+        } catch (JWTCreationException e) {
             return null;
         }
 

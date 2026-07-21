@@ -63,7 +63,12 @@ const router = createRouter({
 
 // Guarda global de rotas
 router.beforeEach((to, _from, next) => {
-  const { isAuthenticated, isTecnico, user } = useAuth()
+  const { isAuthenticated, isTecnico, user, initAuth } = useAuth()
+
+  // Garante que o usuário seja restaurado do token mesmo em reload
+  if (isAuthenticated.value && !user.value) {
+    initAuth()
+  }
 
   // Se a rota requer autenticação e o usuário não está autenticado
   if (to.meta.requiresAuth && !isAuthenticated.value) {

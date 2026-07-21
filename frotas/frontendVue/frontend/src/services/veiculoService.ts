@@ -19,6 +19,23 @@ export const veiculoService = {
     )
   },
 
+  async buscarPorPrefixo(prefixo: string): Promise<VeiculoResponse[]> {
+    if (!prefixo.trim()) return []
+    const veiculos = await this.listarTodos()
+    return veiculos
+      .filter((v) =>
+        v.placaVeiculo.toUpperCase().includes(prefixo.toUpperCase().trim())
+      )
+      .slice(0, 8)
+  },
+
+  async buscarPorFrota(frota: string): Promise<VeiculoResponse | undefined> {
+    const veiculos = await this.listarTodos()
+    return veiculos.find(
+      (v) => v.frota?.toString().toUpperCase() === frota.toUpperCase().trim()
+    )
+  },
+
   async excluir(id: number): Promise<void> {
     await api.delete(`/veiculo/${id}`)
   },

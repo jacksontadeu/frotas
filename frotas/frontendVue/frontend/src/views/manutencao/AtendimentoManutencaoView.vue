@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { manutencaoService } from '../../services/manutencaoService'
+import { extractErrorMessage } from '../../composables/useErrorMessage'
 import type { ManutencaoResponse } from '../../types'
 
 const manutencoes = ref<ManutencaoResponse[]>([])
@@ -11,6 +12,9 @@ const success = ref<string | null>(null)
 
 // ID da manutenção atualmente expandida
 const expandedId = ref<number | null>(null)
+
+// Modo de visualização: 'list' (lista) ou 'grid' (cards)
+const viewMode = ref<'list' | 'grid'>('list')
 
 // Checklist para a manutenção selecionada
 const checklist = ref({
@@ -27,7 +31,7 @@ async function carregarManutencoes() {
     error.value = null
     manutencoes.value = await manutencaoService.listarAbertas()
   } catch (err: any) {
-    error.value = 'Erro ao carregar manutenções em aberto. Verifique se o servidor está rodando.'
+    error.value = extractErrorMessage(err, 'Erro ao carregar manutenções em aberto. Verifique se o servidor está rodando.')
   } finally {
     loading.value = false
   }
@@ -97,9 +101,33 @@ onMounted(carregarManutencoes)
 
 <template>
   <div class="page-content">
-    <div class="page-header">
-      <h1 class="page-title">🔧 Atendimento de Manutenções</h1>
-      <p class="page-subtitle">Selecione uma manutenção em aberto para realizar o checklist e finalizá-la.</p>
+    <div class="page-header-row">
+      <div class="page-header">
+        <h1 class="page-title">🔧 Atendimento de Manutenções</h1>
+        <p class="page-subtitle">Selecione uma manutenção em aberto para realizar o checklist e finalizá-la.</p>
+      </div>
+
+      <!-- Alternador de Visualização (Lista x Cards) -->
+      <div v-if="!loading && manutencoes.length > 0" class="view-toggle">
+        <button
+          type="button"
+          class="toggle-btn"
+          :class="{ active: viewMode === 'list' }"
+          @click="viewMode = 'list'"
+          title="Visualização em Lista"
+        >
+          ☰ Lista
+        </button>
+        <button
+          type="button"
+          class="toggle-btn"
+          :class="{ active: viewMode === 'grid' }"
+          @click="viewMode = 'grid'"
+          title="Visualização em Cards"
+        >
+          🔲 Cards
+        </button>
+      </div>
     </div>
 
     <!-- Alert Success -->
@@ -128,13 +156,13 @@ onMounted(carregarManutencoes)
       </button>
     </div>
 
-    <!-- List of Open Maintenances -->
-    <div v-else class="atendimento-list">
+    <!-- List / Grid of Open Maintenances -->
+    <div v-else :class="['atendimento-container', viewMode === 'grid' ? 'grid-mode' : 'list-mode']">
       <div
         v-for="m in manutencoes"
         :key="m.id"
         class="atendimento-card glass-card"
-        :class="{ active: expandedId === m.id }"
+        :class="{ active: expandedId === m.id, 'is-grid': viewMode === 'grid' }"
       >
         <!-- Header: Informações básicas da manutenção -->
         <div class="atendimento-header" @click="toggleExpand(m.id)">
@@ -259,10 +287,62 @@ onMounted(carregarManutencoes)
 </template>
 
 <style scoped>
-.atendimento-list {
+.page-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.view-toggle {
+  display: inline-flex;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.25rem;
+  gap: 0.25rem;
+}
+
+.toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.toggle-btn:hover:not(.active) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.toggle-btn.active {
+  background: var(--accent-1);
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(238, 130, 39, 0.35);
+}
+
+/* Containers */
+.atendimento-container.list-mode {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.atendimento-container.grid-mode {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 1.25rem;
+  align-items: start;
 }
 
 .atendimento-card {
@@ -279,6 +359,24 @@ onMounted(carregarManutencoes)
   border-color: rgba(238, 130, 39, 0.4);
   box-shadow: var(--shadow-lg), 0 0 25px rgba(238, 130, 39, 0.1);
   transform: none;
+}
+
+/* Grid-specific card adjustments */
+.atendimento-card.is-grid.active {
+  grid-column: 1 / -1;
+}
+
+.atendimento-card.is-grid .atendimento-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.atendimento-card.is-grid .manutencao-status-info {
+  width: 100%;
+  justify-content: space-between;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
 }
 
 /* Header layout */
@@ -477,6 +575,24 @@ onMounted(carregarManutencoes)
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  .page-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .view-toggle {
+    width: 100%;
+  }
+
+  .toggle-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .atendimento-container.grid-mode {
+    grid-template-columns: 1fr;
+  }
+
   .atendimento-header {
     flex-direction: column;
     align-items: flex-start;

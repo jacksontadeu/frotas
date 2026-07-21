@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
-
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/veiculo")
 @Tag(name = "veiculo")
@@ -34,11 +34,9 @@ public class VeiculoController {
     }
 
     @PostMapping()
-    public ResponseEntity cadastrarVeiuclo(@RequestBody VeiculoDTORequest request){
-        Veiculo veiculo = modelMapper.map(request, Veiculo.class);
-        Optional<Base> base = baseService.buscarPorId(request.getBase_id());
-        veiculo.setBase(base.get());
-        veiculoService.cadastrarVeiculo(veiculo);
+    public ResponseEntity<String> cadastrarVeiculo(@RequestBody VeiculoDTORequest request){
+
+        veiculoService.cadastrarVeiculo(request);
         return ResponseEntity.status(HttpStatus.CREATED).body("Cadastrado com sucesso!!!");
     }
     @GetMapping()
@@ -56,4 +54,15 @@ public class VeiculoController {
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
+    @GetMapping("/placa/{placa}")
+    public ResponseEntity<Boolean> verificarPlaca(@PathVariable String placa){
+        Boolean existe = veiculoService.verificarPlaca(placa);
+        return ResponseEntity.status(HttpStatus.OK).body(existe);
+    }
+    @GetMapping("/frota/{frota}")
+    public ResponseEntity<Boolean> verificarFrota(@PathVariable String frota){
+        Boolean existe = veiculoService.verificarFrota(frota);
+        return ResponseEntity.status(HttpStatus.OK).body(existe);
+    }
+
 }

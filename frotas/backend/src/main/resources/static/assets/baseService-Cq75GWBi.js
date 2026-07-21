@@ -1,1 +1,0 @@
-import{r as e}from"./index-aRhVbZta.js";var t={async cadastrar(t){await e.post(`/base`,t)},async listarTodas(){return(await e.get(`/base`)).data},async excluir(t){await e.delete(`/base/${t}`)}};export{t};

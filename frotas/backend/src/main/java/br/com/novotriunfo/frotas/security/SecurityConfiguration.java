@@ -12,6 +12,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -41,13 +46,13 @@ public class SecurityConfiguration {
                                 "/webjars/**"
                         ).permitAll()
 
-                        // Rotas de atendimento
+                        // Rotas de atendimento e manutenção (acessíveis por TÉCNICO e ADMIN)
                         .requestMatchers("/atendimento/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMIN")
+                        .requestMatchers("/manutencao", "/manutencao/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMIN")
 
-                        // Rotas de dashboard
-                        .requestMatchers("/veiculo/**").hasAuthority("ADMIN")
-                        .requestMatchers("/base/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/manutencao/**").hasAuthority("ROLE_ADMIN")
+                        // Rotas protegidas por ROLE_ADMIN
+                        .requestMatchers("/veiculo", "/veiculo/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/base", "/base/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/cadastros/**").hasAuthority("ROLE_ADMIN")
 
                         // Vue liberado
@@ -67,6 +72,8 @@ public class SecurityConfiguration {
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
+
+
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {

@@ -11,4 +11,6 @@ public interface VeiculoRepository extends JpaRepository<Veiculo, Long> {
 
     Boolean existsByPlacaVeiculo(String placa);
 
+    Boolean existsByFrota(String frota);
+
 }

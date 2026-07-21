@@ -3,11 +3,20 @@ import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { baseService } from '../../services/baseService'
 import type { BaseResponse } from '../../types'
+import AppModal from '../../components/AppModal.vue'
+import { extractErrorMessage } from '../../composables/useErrorMessage'
 
 const bases = ref<BaseResponse[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const deletingId = ref<number | null>(null)
+
+// Modal de confirmação / resultado
+const showModal = ref(false)
+const modalType = ref<'success' | 'error' | 'confirm'>('confirm')
+const modalMessage = ref('')
+const pendingDeleteId = ref<number | null>(null)
+const pendingDeleteNome = ref('')
 
 async function carregarBases() {
   try {
@@ -21,17 +30,37 @@ async function carregarBases() {
   }
 }
 
-async function excluirBase(id: number, nome: string) {
-  if (!confirm(`Tem certeza que deseja excluir a base "${nome}"?`)) return
+function confirmarExclusao(id: number, nome: string) {
+  pendingDeleteId.value = id
+  pendingDeleteNome.value = nome
+  modalType.value = 'confirm'
+  modalMessage.value = `Tem certeza que deseja excluir a base "${nome}"? Esta ação não pode ser desfeita.`
+  showModal.value = true
+}
+
+async function executarExclusao() {
+  showModal.value = false
+  if (!pendingDeleteId.value) return
+  const id = pendingDeleteId.value
   try {
     deletingId.value = id
     await baseService.excluir(id)
     bases.value = bases.value.filter((b) => b.id !== id)
-  } catch (e) {
-    error.value = 'Erro ao excluir base.'
+    modalType.value = 'success'
+    modalMessage.value = `Base "${pendingDeleteNome.value}" excluída com sucesso!`
+    showModal.value = true
+  } catch (e: any) {
+    modalType.value = 'error'
+    modalMessage.value = extractErrorMessage(e, 'Erro ao excluir base.')
+    showModal.value = true
   } finally {
     deletingId.value = null
+    pendingDeleteId.value = null
   }
+}
+
+function fecharModal() {
+  showModal.value = false
 }
 
 onMounted(carregarBases)
@@ -88,7 +117,7 @@ onMounted(carregarBases)
           <button
             class="btn btn-danger btn-sm"
             :disabled="deletingId === base.id"
-            @click="excluirBase(base.id, base.nome)"
+            @click="confirmarExclusao(base.id, base.nome)"
           >
             {{ deletingId === base.id ? '⏳' : '🗑️' }} Excluir
           </button>
@@ -96,4 +125,15 @@ onMounted(carregarBases)
       </li>
     </ul>
   </div>
+
+  <!-- Modal -->
+  <AppModal
+    :show="showModal"
+    :type="modalType"
+    :message="modalMessage"
+    confirm-label="Sim, excluir"
+    cancel-label="Cancelar"
+    @close="fecharModal"
+    @confirm="executarExclusao"
+  />
 </template>

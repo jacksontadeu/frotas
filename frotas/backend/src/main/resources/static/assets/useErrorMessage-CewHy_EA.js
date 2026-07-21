@@ -1,0 +1,1 @@
+function e(e,t=`Ocorreu um erro inesperado.`){let n=e?.response?.data;return n?n.message||n.detail||n.error||n.erro||e?.response?.statusText||e?.message||t:e?.message||t}export{e as t};

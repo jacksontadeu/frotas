@@ -3,11 +3,20 @@ import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { veiculoService } from '../../services/veiculoService'
 import type { VeiculoResponse } from '../../types'
+import AppModal from '../../components/AppModal.vue'
+import { extractErrorMessage } from '../../composables/useErrorMessage'
 
 const veiculos = ref<VeiculoResponse[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const deletingId = ref<number | null>(null)
+
+// Modal
+const showModal = ref(false)
+const modalType = ref<'success' | 'error' | 'confirm'>('confirm')
+const modalMessage = ref('')
+const pendingDeleteId = ref<number | null>(null)
+const pendingDeleteNome = ref('')
 
 async function carregarVeiculos() {
   try {
@@ -21,17 +30,37 @@ async function carregarVeiculos() {
   }
 }
 
-async function excluirVeiculo(id: number, nome: string) {
-  if (!confirm(`Tem certeza que deseja excluir o veículo "${nome}"?`)) return
+function confirmarExclusao(id: number, nome: string) {
+  pendingDeleteId.value = id
+  pendingDeleteNome.value = nome
+  modalType.value = 'confirm'
+  modalMessage.value = `Tem certeza que deseja excluir o veículo "${nome}"? Esta ação não pode ser desfeita.`
+  showModal.value = true
+}
+
+async function executarExclusao() {
+  showModal.value = false
+  if (!pendingDeleteId.value) return
+  const id = pendingDeleteId.value
   try {
     deletingId.value = id
     await veiculoService.excluir(id)
     veiculos.value = veiculos.value.filter((v) => v.id !== id)
-  } catch {
-    error.value = 'Erro ao excluir veículo.'
+    modalType.value = 'success'
+    modalMessage.value = `Veículo "${pendingDeleteNome.value}" excluído com sucesso!`
+    showModal.value = true
+  } catch (e: any) {
+    modalType.value = 'error'
+    modalMessage.value = extractErrorMessage(e, 'Erro ao excluir veículo.')
+    showModal.value = true
   } finally {
     deletingId.value = null
+    pendingDeleteId.value = null
   }
+}
+
+function fecharModal() {
+  showModal.value = false
 }
 
 const tipoIcon: Record<string, string> = {
@@ -104,7 +133,7 @@ onMounted(carregarVeiculos)
           <button
             class="btn btn-danger btn-sm"
             :disabled="deletingId === veiculo.id"
-            @click="excluirVeiculo(veiculo.id, veiculo.nome)"
+            @click="confirmarExclusao(veiculo.id, veiculo.nome)"
           >
             {{ deletingId === veiculo.id ? '⏳' : '🗑️' }} Excluir
           </button>
@@ -112,4 +141,15 @@ onMounted(carregarVeiculos)
       </li>
     </ul>
   </div>
+
+  <!-- Modal -->
+  <AppModal
+    :show="showModal"
+    :type="modalType"
+    :message="modalMessage"
+    confirm-label="Sim, excluir"
+    cancel-label="Cancelar"
+    @close="fecharModal"
+    @confirm="executarExclusao"
+  />
 </template>

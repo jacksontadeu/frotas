@@ -9,7 +9,7 @@ interface UserSession {
   role: string
 }
 
-const token = ref<string | null>(localStorage.getItem('token'))
+const token = ref<string | null>(sessionStorage.getItem('token'))
 const user = ref<UserSession | null>(null)
 const errorMsg = ref<string | null>(null)
 const isLoading = ref(false)
@@ -60,7 +60,7 @@ export function useAuth() {
 
       token.value = jwtToken
       user.value = decodedUser
-      localStorage.setItem('token', jwtToken)
+      sessionStorage.setItem('token', jwtToken)
       return true
     } catch (err: any) {
       if (err.response?.status === 403 || err.response?.status === 401) {
@@ -78,11 +78,11 @@ export function useAuth() {
     token.value = null
     user.value = null
     errorMsg.value = null
-    localStorage.removeItem('token')
+    sessionStorage.removeItem('token')
   }
 
   function initAuth() {
-    const storedToken = localStorage.getItem('token')
+    const storedToken = sessionStorage.getItem('token')
     if (storedToken) {
       const decodedUser = parseJwt(storedToken)
       if (decodedUser && (decodedUser.role === 'ROLE_ADMIN' || decodedUser.role === 'ROLE_TECNICO')) {

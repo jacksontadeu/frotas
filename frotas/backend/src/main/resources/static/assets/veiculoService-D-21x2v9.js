@@ -1,1 +1,0 @@
-import{r as e}from"./index-aRhVbZta.js";var t={async cadastrar(t){await e.post(`/veiculo`,t)},async listarTodos(){return(await e.get(`/veiculo`)).data},async buscarPorPlaca(e){return(await this.listarTodos()).find(t=>t.placaVeiculo.toUpperCase()===e.toUpperCase())},async excluir(t){await e.delete(`/veiculo/${t}`)}};export{t};

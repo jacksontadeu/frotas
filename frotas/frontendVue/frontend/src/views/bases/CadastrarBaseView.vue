@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { baseService } from '../../services/baseService'
 import type { BaseDTORequest } from '../../types'
+import AppModal from '../../components/AppModal.vue'
+import { extractErrorMessage } from '../../composables/useErrorMessage'
 
 const router = useRouter()
 
@@ -13,20 +15,32 @@ const form = ref<BaseDTORequest>({
 })
 
 const loading = ref(false)
-const error = ref<string | null>(null)
-const success = ref(false)
+
+// Modal
+const showModal = ref(false)
+const modalType = ref<'success' | 'error'>('success')
+const modalMessage = ref('')
 
 async function handleSubmit() {
-  error.value = null
   loading.value = true
   try {
     await baseService.cadastrar(form.value)
-    success.value = true
-    setTimeout(() => router.push('/listagem/listar-bases'), 1500)
+    modalType.value = 'success'
+    modalMessage.value = 'Base cadastrada com sucesso!'
+    showModal.value = true
   } catch (e: any) {
-    error.value = e?.response?.data?.message || 'Erro ao cadastrar base. Verifique se o servidor está rodando.'
+    modalType.value = 'error'
+    modalMessage.value = extractErrorMessage(e, 'Erro ao cadastrar base. Verifique se o servidor está rodando.')
+    showModal.value = true
   } finally {
     loading.value = false
+  }
+}
+
+function fecharModal() {
+  showModal.value = false
+  if (modalType.value === 'success') {
+    router.push('/listagem/listar-bases')
   }
 }
 </script>
@@ -39,14 +53,6 @@ async function handleSubmit() {
     </div>
 
     <div class="form-card">
-      <div v-if="success" class="alert alert-success">
-        ✅ Base cadastrada com sucesso! Redirecionando...
-      </div>
-
-      <div v-if="error" class="alert alert-danger">
-        ⚠️ {{ error }}
-      </div>
-
       <form @submit.prevent="handleSubmit" novalidate>
         <div class="form-group">
           <label for="nomeBase" class="form-label">Nome da Base</label>
@@ -57,7 +63,7 @@ async function handleSubmit() {
             class="form-control"
             placeholder="Digite o nome da base"
             required
-            :disabled="loading || success"
+            :disabled="loading"
           />
         </div>
 
@@ -70,7 +76,7 @@ async function handleSubmit() {
             class="form-control"
             placeholder="Digite a localidade da base"
             required
-            :disabled="loading || success"
+            :disabled="loading"
           />
         </div>
 
@@ -83,7 +89,7 @@ async function handleSubmit() {
             class="form-control"
             placeholder="email@exemplo.com"
             required
-            :disabled="loading || success"
+            :disabled="loading"
           />
         </div>
 
@@ -94,7 +100,7 @@ async function handleSubmit() {
           <button
             type="submit"
             class="btn btn-primary"
-            :disabled="loading || success || !form.nome || !form.localidade || !form.emailBase"
+            :disabled="loading || !form.nome || !form.localidade || !form.emailBase"
           >
             <span v-if="loading">⏳ Salvando...</span>
             <span v-else>💾 Cadastrar Base</span>
@@ -103,4 +109,12 @@ async function handleSubmit() {
       </form>
     </div>
   </div>
+
+  <!-- Modal de resultado -->
+  <AppModal
+    :show="showModal"
+    :type="modalType"
+    :message="modalMessage"
+    @close="fecharModal"
+  />
 </template>

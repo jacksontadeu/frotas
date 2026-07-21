@@ -15,11 +15,7 @@ onMounted(() => {
   <div id="app">
     <AppHeader v-if="!$route.meta.hideHeader" />
     <main>
-      <RouterView v-slot="{ Component }">
-        <Transition name="page" mode="out-in">
-          <component :is="Component" />
-        </Transition>
-      </RouterView>
+      <RouterView />
     </main>
   </div>
 </template>

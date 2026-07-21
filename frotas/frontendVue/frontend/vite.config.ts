@@ -7,8 +7,6 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // Proxy para evitar CORS em desenvolvimento
-      // Requisições para /base, /veiculo, /manutencao são redirecionadas ao backend
       '/base': {
         target: 'http://localhost:8080',
         changeOrigin: true,
@@ -21,10 +19,17 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      // /login é usado como rota Vue (GET) e endpoint REST (POST).
+      // bypass: GET navega pelo Vue Router; POST vai ao backend Spring Boot.
       '/login': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+        bypass(req) {
+          if (req.method !== 'POST') return req.url ?? '/'
+          // sem retorno = undefined → Vite proxia o POST para o backend
+        },
       },
     },
   },
 })
+

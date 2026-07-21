@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { manutencaoService } from '../../services/manutencaoService'
 import { veiculoService } from '../../services/veiculoService'
 import type { ManutencaoDTORequest, VeiculoResponse } from '../../types'
 import { TIPOS_MANUTENCAO } from '../../types'
+import AppModal from '../../components/AppModal.vue'
+import { extractErrorMessage } from '../../composables/useErrorMessage'
 
 const router = useRouter()
 
@@ -15,82 +17,100 @@ const form = ref<ManutencaoDTORequest>({
   veiculo_id: null,
 })
 
-// Campo de texto da placa selecionada (exibição)
-const placaSelecionada = ref('')
+// --- Autocomplete de placa ---
+const placaInput = ref('')
+const sugestoes = ref<VeiculoResponse[]>([])
+const sugestoesVisiveis = ref(false)
+const autoCompleteLoading = ref(false)
+const veiculoSelecionado = ref<VeiculoResponse | null>(null)
+const autoCompleteRef = ref<HTMLElement | null>(null)
 
-// Modal
-const modalOpen = ref(false)
-const placaBusca = ref('')
-const buscaLoading = ref(false)
-const buscaError = ref<string | null>(null)
-const veiculoEncontrado = ref<VeiculoResponse | null>(null)
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(placaInput, (val) => {
+  // Limpa seleção anterior se o usuário editar o campo
+  if (veiculoSelecionado.value && val !== veiculoSelecionado.value.placaVeiculo) {
+    veiculoSelecionado.value = null
+    form.value.veiculo_id = null
+  }
+
+  if (debounceTimer) clearTimeout(debounceTimer)
+
+  if (!val.trim()) {
+    sugestoes.value = []
+    sugestoesVisiveis.value = false
+    return
+  }
+
+  debounceTimer = setTimeout(async () => {
+    autoCompleteLoading.value = true
+    try {
+      sugestoes.value = await veiculoService.buscarPorPrefixo(val)
+      sugestoesVisiveis.value = sugestoes.value.length > 0
+    } catch {
+      sugestoes.value = []
+    } finally {
+      autoCompleteLoading.value = false
+    }
+  }, 250)
+})
+
+function selecionarSugestao(veiculo: VeiculoResponse) {
+  veiculoSelecionado.value = veiculo
+  form.value.veiculo_id = veiculo.id
+  placaInput.value = veiculo.placaVeiculo
+  sugestoes.value = []
+  sugestoesVisiveis.value = false
+}
+
+function fecharSugestoes() {
+  sugestoesVisiveis.value = false
+}
+
+// Fecha o dropdown ao clicar fora
+function handleClickOutside(e: MouseEvent) {
+  if (autoCompleteRef.value && !autoCompleteRef.value.contains(e.target as Node)) {
+    fecharSugestoes()
+  }
+}
 
 // Form
 const loading = ref(false)
-const error = ref<string | null>(null)
-const success = ref(false)
+const showModal = ref(false)
+const modalType = ref<'success' | 'error'>('success')
+const modalMessage = ref('')
 
-// ---- Modal ----
-function abrirModal() {
-  modalOpen.value = true
-  placaBusca.value = ''
-  buscaError.value = null
-  veiculoEncontrado.value = null
-}
-
-function fecharModal() {
-  modalOpen.value = false
-}
-
-async function buscarPlaca() {
-  if (!placaBusca.value.trim()) {
-    buscaError.value = 'Digite uma placa válida!'
+async function handleSubmit() {
+  if (!form.value.veiculo_id) {
+    modalType.value = 'error'
+    modalMessage.value = 'Selecione um veículo válido a partir das sugestões.'
+    showModal.value = true
     return
   }
-  buscaLoading.value = true
-  buscaError.value = null
-  veiculoEncontrado.value = null
-  try {
-    const found = await veiculoService.buscarPorPlaca(placaBusca.value.trim())
-    if (found) {
-      veiculoEncontrado.value = found
-    } else {
-      buscaError.value = 'Veículo não encontrado para essa placa.'
-    }
-  } catch {
-    buscaError.value = 'Erro ao buscar veículo. Verifique se o servidor está rodando.'
-  } finally {
-    buscaLoading.value = false
-  }
-}
-
-function selecionarVeiculo() {
-  if (!veiculoEncontrado.value) return
-  form.value.veiculo_id = veiculoEncontrado.value.id
-  placaSelecionada.value = veiculoEncontrado.value.placaVeiculo
-  fecharModal()
-}
-
-// ---- Submit ----
-async function handleSubmit() {
-  error.value = null
   loading.value = true
   try {
     await manutencaoService.cadastrar(form.value)
-    success.value = true
-    setTimeout(() => router.push('/listagem/listar-veiculos'), 1500)
+    modalType.value = 'success'
+    modalMessage.value = 'Manutenção registrada com sucesso!'
+    showModal.value = true
   } catch (e: any) {
-    error.value = e?.response?.data?.message || 'Erro ao cadastrar manutenção.'
+    modalType.value = 'error'
+    modalMessage.value = extractErrorMessage(e, 'Erro ao cadastrar manutenção.')
+    showModal.value = true
   } finally {
     loading.value = false
   }
 }
 
-// Fechar modal com ESC
-function handleKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape' && modalOpen.value) fecharModal()
+function fecharModal() {
+  showModal.value = false
+  if (modalType.value === 'success') {
+    router.push('/listagem/listar-manutencoes')
+  }
 }
-onMounted(() => document.addEventListener('keydown', handleKeydown))
+
+onMounted(() => document.addEventListener('mousedown', handleClickOutside))
+onBeforeUnmount(() => document.removeEventListener('mousedown', handleClickOutside))
 </script>
 
 <template>
@@ -101,39 +121,59 @@ onMounted(() => document.addEventListener('keydown', handleKeydown))
     </div>
 
     <div class="form-card">
-      <div v-if="success" class="alert alert-success">
-        ✅ Manutenção registrada com sucesso! Redirecionando...
-      </div>
-      <div v-if="error" class="alert alert-danger">⚠️ {{ error }}</div>
-
       <form @submit.prevent="handleSubmit" novalidate>
 
-        <!-- Placa com busca -->
+        <!-- Autocomplete de Placa -->
         <div class="form-group">
           <label for="mPlaca" class="form-label">Veículo (Placa)</label>
-          <div class="input-group">
-            <input
-              id="mPlaca"
-              v-model="placaSelecionada"
-              type="text"
-              class="form-control"
-              placeholder="Clique em Pesquisar para buscar"
-              readonly
-              :disabled="loading || success"
-              style="cursor: default;"
-            />
-            <button
-              type="button"
-              class="btn btn-secondary"
-              :disabled="loading || success"
-              @click="abrirModal"
-            >
-              🔍 Pesquisar
-            </button>
+          <div class="autocomplete-wrapper" ref="autoCompleteRef">
+            <div class="autocomplete-input-wrap">
+              <input
+                id="mPlaca"
+                v-model="placaInput"
+                type="text"
+                class="form-control"
+                :class="{ 'input-valid': veiculoSelecionado }"
+                placeholder="Digite a placa para buscar..."
+                autocomplete="off"
+                :disabled="loading"
+                @focus="sugestoesVisiveis = sugestoes.length > 0"
+              />
+              <span v-if="autoCompleteLoading" class="autocomplete-spinner">⏳</span>
+              <span v-else-if="veiculoSelecionado" class="autocomplete-check">✅</span>
+            </div>
+
+            <!-- Dropdown de sugestões -->
+            <transition name="dropdown">
+              <ul
+                v-if="sugestoesVisiveis && sugestoes.length > 0"
+                class="autocomplete-dropdown"
+                role="listbox"
+              >
+                <li
+                  v-for="v in sugestoes"
+                  :key="v.id"
+                  class="autocomplete-item"
+                  role="option"
+                  @mousedown.prevent="selecionarSugestao(v)"
+                >
+                  <span class="autocomplete-placa">{{ v.placaVeiculo }}</span>
+                  <span class="autocomplete-info">
+                    {{ v.nome }} — {{ v.tipoVeiculo }}
+                    <em v-if="v.base?.nome">· {{ v.base.nome }}</em>
+                  </span>
+                </li>
+              </ul>
+            </transition>
           </div>
-          <p v-if="veiculoEncontrado || form.veiculo_id" class="text-muted" style="margin-top: 0.4rem;">
-            ✅ Veículo ID: {{ form.veiculo_id }}
-          </p>
+
+          <!-- Veículo confirmado -->
+          <div v-if="veiculoSelecionado" class="veiculo-selecionado-badge">
+            🚛 <strong>{{ veiculoSelecionado.nome }}</strong>
+            &nbsp;|&nbsp; Placa: <strong>{{ veiculoSelecionado.placaVeiculo }}</strong>
+            &nbsp;|&nbsp; {{ veiculoSelecionado.tipoVeiculo }}
+            <span v-if="veiculoSelecionado.base?.nome">&nbsp;· {{ veiculoSelecionado.base.nome }}</span>
+          </div>
         </div>
 
         <!-- Quilometragem -->
@@ -147,7 +187,7 @@ onMounted(() => document.addEventListener('keydown', handleKeydown))
             placeholder="Ex: 125000"
             min="0"
             required
-            :disabled="loading || success"
+            :disabled="loading"
           />
         </div>
 
@@ -160,7 +200,7 @@ onMounted(() => document.addEventListener('keydown', handleKeydown))
             type="date"
             class="form-control"
             required
-            :disabled="loading || success"
+            :disabled="loading"
           />
         </div>
 
@@ -172,7 +212,7 @@ onMounted(() => document.addEventListener('keydown', handleKeydown))
             v-model="form.tipoManutencao"
             class="form-select"
             required
-            :disabled="loading || success"
+            :disabled="loading"
           >
             <option value="" disabled>Selecione o tipo</option>
             <option
@@ -186,13 +226,13 @@ onMounted(() => document.addEventListener('keydown', handleKeydown))
         </div>
 
         <div class="form-actions">
-          <RouterLink to="/listagem/listar-veiculos" class="btn btn-secondary">
+          <RouterLink to="/listagem/listar-manutencoes" class="btn btn-secondary">
             Cancelar
           </RouterLink>
           <button
             type="submit"
             class="btn btn-primary"
-            :disabled="loading || success || !form.veiculo_id || !form.dataRealizacao || !form.tipoManutencao"
+            :disabled="loading || !form.veiculo_id || !form.dataRealizacao || !form.tipoManutencao"
           >
             <span v-if="loading">⏳ Salvando...</span>
             <span v-else>🔧 Registrar Manutenção</span>
@@ -202,85 +242,115 @@ onMounted(() => document.addEventListener('keydown', handleKeydown))
     </div>
   </div>
 
-  <!-- Modal de busca de placa -->
-  <Teleport to="body">
-    <div v-if="modalOpen" class="modal-overlay" @click.self="fecharModal">
-      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="modal-header">
-          <h3 id="modalTitle" class="modal-title">🔍 Pesquisar Veículo por Placa</h3>
-          <button
-            class="btn btn-secondary btn-icon"
-            aria-label="Fechar"
-            @click="fecharModal"
-          >✕</button>
-        </div>
-
-        <div class="form-group">
-          <label for="placaBusca" class="form-label">Digite a placa do veículo</label>
-          <div class="input-group">
-            <input
-              id="placaBusca"
-              v-model="placaBusca"
-              type="text"
-              class="form-control"
-              placeholder="Ex: ABC1234"
-              @keyup.enter="buscarPlaca"
-              :disabled="buscaLoading"
-            />
-            <button
-              type="button"
-              class="btn btn-primary"
-              :disabled="buscaLoading"
-              @click="buscarPlaca"
-            >
-              {{ buscaLoading ? '⏳' : '🔍' }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Resultado da busca -->
-        <div v-if="buscaError" class="alert alert-danger">{{ buscaError }}</div>
-
-        <div v-if="veiculoEncontrado" class="veiculo-result">
-          <div class="veiculo-result-info">
-            <p class="veiculo-result-nome">{{ veiculoEncontrado.nome }}</p>
-            <p class="text-muted">
-              Placa: <strong>{{ veiculoEncontrado.placaVeiculo }}</strong> |
-              Tipo: {{ veiculoEncontrado.tipoVeiculo }} |
-              Base: {{ veiculoEncontrado.base?.nome }}
-            </p>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="fecharModal">Cancelar</button>
-          <button
-            class="btn btn-primary"
-            :disabled="!veiculoEncontrado"
-            @click="selecionarVeiculo"
-          >
-            ✅ Selecionar
-          </button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
+  <!-- Modal de resultado -->
+  <AppModal
+    :show="showModal"
+    :type="modalType"
+    :message="modalMessage"
+    @close="fecharModal"
+  />
 </template>
 
 <style scoped>
-.veiculo-result {
+/* ---- Autocomplete ---- */
+.autocomplete-wrapper {
+  position: relative;
+}
+
+.autocomplete-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.autocomplete-input-wrap .form-control {
+  padding-right: 2.5rem;
+}
+
+.autocomplete-spinner,
+.autocomplete-check {
+  position: absolute;
+  right: 0.85rem;
+  font-size: 1rem;
+  pointer-events: none;
+  line-height: 1;
+}
+
+.input-valid {
+  border-color: rgba(34, 197, 94, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12) !important;
+}
+
+/* Dropdown */
+.autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 200;
   background: var(--color-surface-2);
-  border: 1px solid rgba(238, 130, 39, 0.3);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: 1rem;
-  margin-top: 0.75rem;
+  box-shadow: var(--shadow-lg);
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.autocomplete-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  transition: background var(--transition);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-item:hover {
+  background: rgba(238, 130, 39, 0.12);
+}
+
+.autocomplete-placa {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-primary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.autocomplete-info {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Badge do veículo selecionado */
+.veiculo-selecionado-badge {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--text-primary);
   animation: fadeSlideIn 0.2s ease;
 }
 
-.veiculo-result-nome {
-  font-weight: 700;
-  font-size: 1rem;
-  color: var(--text-primary);
-  margin-bottom: 0.25rem;
+/* Animação do dropdown */
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 </style>
