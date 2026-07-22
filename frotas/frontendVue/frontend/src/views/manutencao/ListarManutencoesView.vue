@@ -2,7 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { manutencaoService } from '../../services/manutencaoService'
-import type { ManutencaoResponse } from '../../types'
+import type { ManutencaoResponse, Servico } from '../../types'
+import { SERVICOS_LIST } from '../../types'
 
 const manutencoes = ref<ManutencaoResponse[]>([])
 const loading = ref(true)
@@ -39,6 +40,10 @@ const formatarTipo = (tipo: string) => {
     inspecao: 'Inspeção',
   }
   return map[tipo] || tipo
+}
+
+const getServicoInfo = (servico: Servico) => {
+  return SERVICOS_LIST.find((s) => s.value === servico)
 }
 
 onMounted(carregarManutencoes)
@@ -123,12 +128,14 @@ onMounted(carregarManutencoes)
         <div v-if="m.status === 'FINALIZADA'" class="checklist-summary">
           <span class="checklist-summary-title">Serviços executados:</span>
           <div class="checklist-pills">
-            <span v-if="m.trocaOleo" class="checklist-pill">🛢️ Troca de Óleo</span>
-            <span v-if="m.revisaoArrefecimento" class="checklist-pill">🧪 Arrefecimento</span>
-            <span v-if="m.revisaoFreios" class="checklist-pill">🛑 Freios</span>
-            <span v-if="m.embreagem" class="checklist-pill">⚙️ Embreagem</span>
-            <span v-if="m.faroisLampadas" class="checklist-pill">💡 Faróis/Lâmpadas</span>
-            <span v-if="!m.trocaOleo && !m.revisaoArrefecimento && !m.revisaoFreios && !m.embreagem && !m.faroisLampadas" class="checklist-pill-none">
+            <span
+              v-for="s in m.servicos"
+              :key="s"
+              class="checklist-pill"
+            >
+              {{ getServicoInfo(s)?.icon }} {{ getServicoInfo(s)?.label || s }}
+            </span>
+            <span v-if="!m.servicos || m.servicos.length === 0" class="checklist-pill-none">
               Nenhum item marcado no checklist
             </span>
           </div>

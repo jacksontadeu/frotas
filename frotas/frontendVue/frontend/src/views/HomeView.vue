@@ -20,6 +20,12 @@ const cards = [
     description: 'Registre manutenções preventivas e corretivas.',
     to: '/listagem/listar-manutencoes',
   },
+  {
+    icon: '👤',
+    title: 'Usuários',
+    description: 'Cadastre, edite e gerencie os usuários do sistema.',
+    to: '/listagem/listar-usuarios',
+  },
 ]
 </script>
 
@@ -116,7 +122,7 @@ const cards = [
 /* Cards */
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3 colunas lado a lado */
+  grid-template-columns: repeat(4, 1fr); /* 4 colunas lado a lado */
   gap: 1.5rem;
 }
 

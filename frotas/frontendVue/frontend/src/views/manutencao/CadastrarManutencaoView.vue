@@ -3,8 +3,8 @@ import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { manutencaoService } from '../../services/manutencaoService'
 import { veiculoService } from '../../services/veiculoService'
-import type { ManutencaoDTORequest, VeiculoResponse } from '../../types'
-import { TIPOS_MANUTENCAO } from '../../types'
+import type { ManutencaoDTORequest, VeiculoResponse, Servico } from '../../types'
+import { TIPOS_MANUTENCAO, SERVICOS_LIST } from '../../types'
 import AppModal from '../../components/AppModal.vue'
 import { extractErrorMessage } from '../../composables/useErrorMessage'
 
@@ -15,7 +15,20 @@ const form = ref<ManutencaoDTORequest>({
   kilometragem: null,
   tipoManutencao: '',
   veiculo_id: null,
+  servicos: [],
 })
+
+function toggleServico(servico: Servico) {
+  if (!form.value.servicos) {
+    form.value.servicos = []
+  }
+  const index = form.value.servicos.indexOf(servico)
+  if (index > -1) {
+    form.value.servicos.splice(index, 1)
+  } else {
+    form.value.servicos.push(servico)
+  }
+}
 
 // --- Autocomplete de placa ---
 const placaInput = ref('')
@@ -225,6 +238,31 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', handleClickOutsi
           </select>
         </div>
 
+        <!-- Serviços Solicitados (Opcional) -->
+        <div class="form-group">
+          <label class="form-label">Serviços Solicitados (Opcional)</label>
+          <div class="servicos-grid">
+            <label
+              v-for="s in SERVICOS_LIST"
+              :key="s.value"
+              class="servico-tile"
+              :class="{ selected: form.servicos?.includes(s.value) }"
+            >
+              <input
+                type="checkbox"
+                :value="s.value"
+                :checked="form.servicos?.includes(s.value)"
+                @change="toggleServico(s.value)"
+              />
+              <span class="servico-icon">{{ s.icon }}</span>
+              <div class="servico-info">
+                <span class="servico-label">{{ s.label }}</span>
+                <span class="servico-desc">{{ s.description }}</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
         <div class="form-actions">
           <RouterLink to="/listagem/listar-manutencoes" class="btn btn-secondary">
             Cancelar
@@ -340,6 +378,63 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', handleClickOutsi
   font-size: 0.85rem;
   color: var(--text-primary);
   animation: fadeSlideIn 0.2s ease;
+}
+
+/* Serviços grid */
+.servicos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.servico-tile {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.servico-tile input[type="checkbox"] {
+  display: none;
+}
+
+.servico-tile:hover {
+  border-color: var(--color-border-hover);
+  background: var(--color-surface-3);
+}
+
+.servico-tile.selected {
+  border-color: var(--accent-1);
+  background: rgba(238, 130, 39, 0.1);
+}
+
+.servico-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.servico-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.servico-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.servico-desc {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  line-height: 1.2;
 }
 
 /* Animação do dropdown */

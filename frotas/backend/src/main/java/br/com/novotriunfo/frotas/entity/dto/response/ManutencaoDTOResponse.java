@@ -1,11 +1,13 @@
 package br.com.novotriunfo.frotas.entity.dto.response;
 
+import br.com.novotriunfo.frotas.entity.enums.Servico;
 import br.com.novotriunfo.frotas.entity.enums.StatusManutencao;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import java.time.LocalDate;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -19,9 +21,5 @@ public class ManutencaoDTOResponse {
     private String tipoManutencao;
     private VeiculoDTOResponse veiculo;
     private StatusManutencao status;
-    private Boolean trocaOleo;
-    private Boolean revisaoArrefecimento;
-    private Boolean revisaoFreios;
-    private Boolean embreagem;
-    private Boolean faroisLampadas;
+    private Set<Servico> servicos;
 }

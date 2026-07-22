@@ -58,6 +58,14 @@ const navSections: NavSection[] = [
       { to: '/listagem/listar-manutencoes', label: 'Listar Todas as Manutenções' },
     ],
   },
+  {
+    key: 'usuarios',
+    label: 'Usuários',
+    items: [
+      { to: '/cadastros/cadastrar-usuario', label: 'Cadastrar Usuário' },
+      { to: '/listagem/listar-usuarios', label: 'Listar Usuários' },
+    ],
+  },
 ]
 
 function toggleMenu() {

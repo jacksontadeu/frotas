@@ -19,6 +19,10 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      '/usuario': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
       // /login é usado como rota Vue (GET) e endpoint REST (POST).
       // bypass: GET navega pelo Vue Router; POST vai ao backend Spring Boot.
       '/login': {

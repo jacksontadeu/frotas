@@ -38,6 +38,9 @@ public class ManutencaoController {
         Manutencao manutencao = modelMapper.map(request, Manutencao.class);
         Optional<Veiculo> veiculo = veiculoService.buscarPorId(request.getVeiculo_id());
         manutencao.setVeiculo(veiculo.get());
+        if (request.getServicos() != null && !request.getServicos().isEmpty()) {
+            manutencao.setServicos(request.getServicos());
+        }
         manutencao.setStatus(StatusManutencao.EM_ABERTO); // Garante que inicia em aberto
         manutencaoService.cadastrarMauntencao(manutencao);
         return ResponseEntity.status(HttpStatus.CREATED).body("Manutenção cadastrada com sucesso!!!");
@@ -61,11 +64,15 @@ public class ManutencaoController {
         if (optionalManutencao.isPresent()) {
             Manutencao manutencao = optionalManutencao.get();
             manutencao.setStatus(StatusManutencao.FINALIZADA);
-            manutencao.setTrocaOleo(request.getTrocaOleo());
-            manutencao.setRevisaoArrefecimento(request.getRevisaoArrefecimento());
-            manutencao.setRevisaoFreios(request.getRevisaoFreios());
-            manutencao.setEmbreagem(request.getEmbreagem());
-            manutencao.setFaroisLampadas(request.getFaroisLampadas());
+            if (request.getServicos() != null) {
+                manutencao.setServicos(request.getServicos());
+            }
+            if (request.getKilometragem() != null) {
+                manutencao.setKilometragem(request.getKilometragem());
+            }
+            if (request.getDataRealizacao() != null) {
+                manutencao.setDataRealizacao(request.getDataRealizacao());
+            }
             // Define a data da próxima manutenção para 6 meses no futuro
             manutencao.setDataProximaManutencao(LocalDate.now().plusMonths(6));
             manutencaoService.salvar(manutencao);

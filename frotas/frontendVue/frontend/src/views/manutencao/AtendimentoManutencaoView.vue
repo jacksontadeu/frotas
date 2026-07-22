@@ -2,7 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { manutencaoService } from '../../services/manutencaoService'
 import { extractErrorMessage } from '../../composables/useErrorMessage'
-import type { ManutencaoResponse } from '../../types'
+import type { ManutencaoResponse, Servico } from '../../types'
+import { SERVICOS_LIST } from '../../types'
 
 const manutencoes = ref<ManutencaoResponse[]>([])
 const loading = ref(true)
@@ -16,14 +17,10 @@ const expandedId = ref<number | null>(null)
 // Modo de visualização: 'list' (lista) ou 'grid' (cards)
 const viewMode = ref<'list' | 'grid'>('list')
 
-// Checklist para a manutenção selecionada
-const checklist = ref({
-  trocaOleo: false,
-  revisaoArrefecimento: false,
-  revisaoFreios: false,
-  embreagem: false,
-  faroisLampadas: false,
-})
+// Lista de serviços selecionados para o atendimento
+const servicosSelecionados = ref<Servico[]>([])
+const formKilometragem = ref<number | null>(null)
+const formDataRealizacao = ref<string>('')
 
 async function carregarManutencoes() {
   try {
@@ -37,22 +34,34 @@ async function carregarManutencoes() {
   }
 }
 
-function toggleExpand(id: number) {
-  if (expandedId.value === id) {
+function toggleExpand(manutencao: ManutencaoResponse) {
+  if (expandedId.value === manutencao.id) {
     expandedId.value = null
+    servicosSelecionados.value = []
+    formKilometragem.value = null
+    formDataRealizacao.value = ''
   } else {
-    expandedId.value = id
-    // Reseta o checklist ao abrir
-    checklist.value = {
-      trocaOleo: false,
-      revisaoArrefecimento: false,
-      revisaoFreios: false,
-      embreagem: false,
-      faroisLampadas: false,
-    }
+    expandedId.value = manutencao.id
+    // Inicializa com os dados atuais da manutenção
+    servicosSelecionados.value = manutencao.servicos ? [...manutencao.servicos] : []
+    formKilometragem.value = manutencao.kilometragem
+    formDataRealizacao.value = manutencao.dataRealizacao
   }
   success.value = null
   error.value = null
+}
+
+function isServicoSelecionado(servico: Servico): boolean {
+  return servicosSelecionados.value.includes(servico)
+}
+
+function toggleServico(servico: Servico) {
+  const index = servicosSelecionados.value.indexOf(servico)
+  if (index > -1) {
+    servicosSelecionados.value.splice(index, 1)
+  } else {
+    servicosSelecionados.value.push(servico)
+  }
 }
 
 async function finalizarAtendimento(id: number) {
@@ -60,7 +69,11 @@ async function finalizarAtendimento(id: number) {
   error.value = null
   success.value = null
   try {
-    await manutencaoService.atender(id, checklist.value)
+    await manutencaoService.atender(id, {
+      servicos: servicosSelecionados.value,
+      kilometragem: formKilometragem.value,
+      dataRealizacao: formDataRealizacao.value,
+    })
     success.value = 'Manutenção concluída com sucesso!'
     expandedId.value = null
     // Aguarda um momento e recarrega a lista
@@ -165,7 +178,7 @@ onMounted(carregarManutencoes)
         :class="{ active: expandedId === m.id, 'is-grid': viewMode === 'grid' }"
       >
         <!-- Header: Informações básicas da manutenção -->
-        <div class="atendimento-header" @click="toggleExpand(m.id)">
+        <div class="atendimento-header" @click="toggleExpand(m)">
           <div class="veiculo-info">
             <span class="veiculo-icon">{{ tipoIcon[m.veiculo.tipoVeiculo] ?? '🚙' }}</span>
             <div class="veiculo-details">
@@ -194,66 +207,51 @@ onMounted(carregarManutencoes)
         <Transition name="expand">
           <div v-if="expandedId === m.id" class="atendimento-body">
             <hr class="divider" />
+
+            <!-- Dados Editáveis da Manutenção -->
+            <div class="atendimento-dados-editaveis">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label for="aKm" class="form-label">📍 Quilometragem Atual (Km)</label>
+                <input
+                  id="aKm"
+                  v-model.number="formKilometragem"
+                  type="number"
+                  class="form-control"
+                  placeholder="Ex: 125000"
+                  min="0"
+                />
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label for="aData" class="form-label">📅 Data de Realização</label>
+                <input
+                  id="aData"
+                  v-model="formDataRealizacao"
+                  type="date"
+                  class="form-control"
+                />
+              </div>
+            </div>
+
             <h5 class="checklist-title">📋 Checklist de Serviços Realizados</h5>
             <p class="checklist-subtitle">Selecione as manutenções efetuadas no veículo:</p>
 
             <div class="checklist-grid">
-              <!-- Item 1: Troca de óleo -->
-              <label class="checklist-item-tile" :class="{ checked: checklist.trocaOleo }">
-                <input type="checkbox" v-model="checklist.trocaOleo" />
+              <label
+                v-for="s in SERVICOS_LIST"
+                :key="s.value"
+                class="checklist-item-tile"
+                :class="{ checked: isServicoSelecionado(s.value) }"
+              >
+                <input
+                  type="checkbox"
+                  :checked="isServicoSelecionado(s.value)"
+                  @change="toggleServico(s.value)"
+                />
                 <div class="tile-content">
-                  <span class="tile-icon">🛢️</span>
+                  <span class="tile-icon">{{ s.icon }}</span>
                   <div class="tile-text">
-                    <span class="tile-label">Troca de Óleo</span>
-                    <span class="tile-desc">Substituição do lubrificante e filtro do motor</span>
-                  </div>
-                </div>
-              </label>
-
-              <!-- Item 2: Arrefecimento -->
-              <label class="checklist-item-tile" :class="{ checked: checklist.revisaoArrefecimento }">
-                <input type="checkbox" v-model="checklist.revisaoArrefecimento" />
-                <div class="tile-content">
-                  <span class="tile-icon">🧪</span>
-                  <div class="tile-text">
-                    <span class="tile-label">Sistema de Arrefecimento</span>
-                    <span class="tile-desc">Revisão e limpeza do radiador e aditivos</span>
-                  </div>
-                </div>
-              </label>
-
-              <!-- Item 3: Freios -->
-              <label class="checklist-item-tile" :class="{ checked: checklist.revisaoFreios }">
-                <input type="checkbox" v-model="checklist.revisaoFreios" />
-                <div class="tile-content">
-                  <span class="tile-icon">🛑</span>
-                  <div class="tile-text">
-                    <span class="tile-label">Revisão de Freios</span>
-                    <span class="tile-desc">Verificação de pastilhas, discos e fluido</span>
-                  </div>
-                </div>
-              </label>
-
-              <!-- Item 4: Embreagem -->
-              <label class="checklist-item-tile" :class="{ checked: checklist.embreagem }">
-                <input type="checkbox" v-model="checklist.embreagem" />
-                <div class="tile-content">
-                  <span class="tile-icon">⚙️</span>
-                  <div class="tile-text">
-                    <span class="tile-label">Embreagem</span>
-                    <span class="tile-desc">Inspeção do pedal, disco e rolamento</span>
-                  </div>
-                </div>
-              </label>
-
-              <!-- Item 5: Faróis e Lâmpadas -->
-              <label class="checklist-item-tile" :class="{ checked: checklist.faroisLampadas }">
-                <input type="checkbox" v-model="checklist.faroisLampadas" />
-                <div class="tile-content">
-                  <span class="tile-icon">💡</span>
-                  <div class="tile-text">
-                    <span class="tile-label">Faróis e Lâmpadas</span>
-                    <span class="tile-desc">Teste e troca de luzes e lanternas</span>
+                    <span class="tile-label">{{ s.label }}</span>
+                    <span class="tile-desc">{{ s.description }}</span>
                   </div>
                 </div>
               </label>
@@ -265,7 +263,7 @@ onMounted(carregarManutencoes)
                 type="button"
                 class="btn btn-secondary"
                 :disabled="submitting !== null"
-                @click="toggleExpand(m.id)"
+                @click="toggleExpand(m)"
               >
                 Cancelar
               </button>
@@ -462,6 +460,17 @@ onMounted(carregarManutencoes)
 /* Body and checklist styling */
 .atendimento-body {
   margin-top: 1rem;
+}
+
+.atendimento-dados-editaveis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  padding: 1rem;
+  border-radius: var(--radius-md);
 }
 
 .checklist-title {

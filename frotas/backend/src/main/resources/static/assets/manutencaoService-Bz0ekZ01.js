@@ -1,1 +1,0 @@
-import{r as e}from"./index-fOALhhg4.js";var t={async cadastrar(t){await e.post(`/manutencao`,t)},async listarTodas(){return(await e.get(`/manutencao`)).data},async listarAbertas(){return(await e.get(`/manutencao`,{params:{status:`EM_ABERTO`}})).data},async atender(t,n){await e.put(`/manutencao/${t}/atendimento`,n)}};export{t};

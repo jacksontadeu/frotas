@@ -10,7 +10,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @NoArgsConstructor
@@ -22,9 +24,14 @@ public class Usuario implements UserDetails {
     private Long id;
     private String nome;
     private String email;
+    private String telefone;
     private String senha;
     @Enumerated(EnumType.STRING)
     private Role role;
+
+    @OneToMany(mappedBy = "responsavel")
+    private Set<Base> basesResponsavel = new HashSet<>();
+
 
 
     @Override

@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>br.com.novotriunfo</groupId>
 	<artifactId>frotas</artifactId>
-	<version>novotriunfo-2.0.0</version>
+	<version>novotriunfo-2.1.0</version>
 	<name>frotas</name>
 	<description>Projeto Comtrole de Frotas</description>
 	<url/>

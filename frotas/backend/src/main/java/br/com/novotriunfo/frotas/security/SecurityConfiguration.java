@@ -36,7 +36,12 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authz -> authz
                         // Login liberado
                         .requestMatchers(HttpMethod.POST, "/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/usuario").permitAll()
+
+                        // Usuários: GET liberado; POST, PUT e DELETE exigem ROLE_ADMIN
+                        .requestMatchers(HttpMethod.GET, "/usuario", "/usuario/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/usuario").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/usuario/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/usuario/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
 
                         // Swagger liberado
                         .requestMatchers(
@@ -47,13 +52,13 @@ public class SecurityConfiguration {
                         ).permitAll()
 
                         // Rotas de atendimento e manutenção (acessíveis por TÉCNICO e ADMIN)
-                        .requestMatchers("/atendimento/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMIN")
-                        .requestMatchers("/manutencao", "/manutencao/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMIN")
+                        .requestMatchers("/atendimento/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMIN", "TECNICO", "ADMIN")
+                        .requestMatchers("/manutencao", "/manutencao/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMIN", "TECNICO", "ADMIN")
 
                         // Rotas protegidas por ROLE_ADMIN
-                        .requestMatchers("/veiculo", "/veiculo/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/base", "/base/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/cadastros/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/veiculo", "/veiculo/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+                        .requestMatchers("/base", "/base/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+                        .requestMatchers("/cadastros/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
 
                         // Vue liberado
                         .requestMatchers(

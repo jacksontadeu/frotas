@@ -58,6 +58,22 @@ const router = createRouter({
       component: () => import('../views/manutencao/AtendimentoManutencaoView.vue'),
       meta: { requiresAuth: true, roles: ['ROLE_TECNICO', 'ROLE_ADMIN'] },
     },
+    {
+      path: '/listagem/listar-usuarios',
+      name: 'listar-usuarios',
+      component: () => import('../views/usuarios/ListarUsuariosView.vue'),
+      meta: { requiresAuth: true, roles: ['ROLE_ADMIN'] },
+    },
+    {
+      path: '/cadastros/cadastrar-usuario',
+      name: 'cadastrar-usuario',
+      component: () => import('../views/usuarios/CadastrarUsuarioView.vue'),
+      meta: { requiresAuth: true, roles: ['ROLE_ADMIN'] },
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/',
+    },
   ],
 })
 
@@ -65,8 +81,8 @@ const router = createRouter({
 router.beforeEach((to, _from, next) => {
   const { isAuthenticated, isTecnico, user, initAuth } = useAuth()
 
-  // Garante que o usuário seja restaurado do token mesmo em reload
-  if (isAuthenticated.value && !user.value) {
+  // Garante que o usuário seja restaurado do token em qualquer navegação
+  if (sessionStorage.getItem('token') && (!isAuthenticated.value || !user.value)) {
     initAuth()
   }
 
@@ -74,7 +90,7 @@ router.beforeEach((to, _from, next) => {
   if (to.meta.requiresAuth && !isAuthenticated.value) {
     next({ name: 'login' })
   }
-  // Se o usuário está logado mas tenta ir para o login
+  // Se o usuário está logado mas tenta ir para a tela de login
   else if (to.meta.guestOnly && isAuthenticated.value) {
     if (isTecnico.value) {
       next({ name: 'atendimento-manutencao' })
@@ -82,28 +98,21 @@ router.beforeEach((to, _from, next) => {
       next({ name: 'home' })
     }
   }
-  // Se está autenticado, verifica os papéis permitidos
+  // Se está autenticado, verifica permissões de papéis
   else if (to.meta.requiresAuth) {
     const userRole = user.value?.role
     const allowedRoles = (to.meta.roles as string[]) || ['ROLE_ADMIN']
 
     if (userRole && allowedRoles.includes(userRole)) {
       next()
+    } else if (isTecnico.value) {
+      next({ name: 'atendimento-manutencao' })
     } else {
-      // Se for técnico mas tentar acessar área administrativa
-      if (isTecnico.value) {
-        next({ name: 'atendimento-manutencao' })
-      } else {
-        const { logout } = useAuth()
-        logout()
-        next({ name: 'login' })
-      }
+      next({ name: 'login' })
     }
-  }
-  else {
+  } else {
     next()
   }
 })
 
 export default router
-

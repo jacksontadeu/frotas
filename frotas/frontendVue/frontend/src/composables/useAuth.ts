@@ -17,6 +17,7 @@ const isLoading = ref(false)
 function parseJwt(t: string): UserSession | null {
   try {
     const base64Url = t.split('.')[1]
+    if (!base64Url) return null
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
     const jsonPayload = decodeURIComponent(
       window
@@ -26,19 +27,33 @@ function parseJwt(t: string): UserSession | null {
         .join('')
     )
     const decoded = JSON.parse(jsonPayload)
+    const rawRole = (decoded.role || '').toString().trim()
+    const normalizedRole = rawRole ? (rawRole.startsWith('ROLE_') ? rawRole : `ROLE_${rawRole}`) : ''
+
     return {
-      email: decoded.sub,
-      nome: decoded.nome,
-      id: decoded.id,
-      role: decoded.role,
+      email: decoded.sub || '',
+      nome: decoded.nome || decoded.sub || 'Usuário',
+      id: decoded.id || 0,
+      role: normalizedRole,
     }
   } catch (e) {
     return null
   }
 }
 
+// Inicializa a sessão imediatamente caso já exista um token salvo no sessionStorage
+if (token.value && !user.value) {
+  const initialUser = parseJwt(token.value)
+  if (initialUser) {
+    user.value = initialUser
+  } else {
+    sessionStorage.removeItem('token')
+    token.value = null
+  }
+}
+
 export function useAuth() {
-  const isAuthenticated = computed(() => !!token.value)
+  const isAuthenticated = computed(() => !!token.value && !!user.value)
   const isAdmin = computed(() => user.value?.role === 'ROLE_ADMIN')
   const isTecnico = computed(() => user.value?.role === 'ROLE_TECNICO')
 
@@ -85,7 +100,7 @@ export function useAuth() {
     const storedToken = sessionStorage.getItem('token')
     if (storedToken) {
       const decodedUser = parseJwt(storedToken)
-      if (decodedUser && (decodedUser.role === 'ROLE_ADMIN' || decodedUser.role === 'ROLE_TECNICO')) {
+      if (decodedUser) {
         token.value = storedToken
         user.value = decodedUser
       } else {

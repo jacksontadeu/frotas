@@ -16,10 +16,5 @@ public class BaseDTORequest {
     @NotBlank
     @NotNull
     private String nome;
-
-    @NotBlank
-    @NotNull
-    private String localidade;
-    @Column(name="email_base")
-    private String emailBase;
+    private Long usuarioId;
 }
