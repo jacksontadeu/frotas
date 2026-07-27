@@ -18,16 +18,12 @@ public class Base {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String nome;
-    private String telefone;
-
-    @Column(name = "email_base")
-    private String emailBase;
 
     @ManyToOne
     @JoinColumn(name = "usuario_responsavel_id")
     private Usuario responsavel;
 
-    @OneToMany(mappedBy = ("base"))
+    @OneToMany(mappedBy = "base")
     private Set<Veiculo> veiculos= new HashSet<>();
 
 }

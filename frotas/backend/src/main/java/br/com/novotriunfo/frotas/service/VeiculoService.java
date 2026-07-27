@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Year;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,7 +35,7 @@ public class VeiculoService {
         veiculo.setBase(base.get());
         veiculo.setTipoVeiculo(TipoVeiculo.valueOf(request.getTipoVeiculo()));
         veiculo.setCor(request.getCor());
-        veiculo.setAnoDeFabricacao(String.valueOf(request.getAnoDeFabricacao()));
+        veiculo.setAnoDeFabricacao(Year.parse(String.valueOf(request.getAnoDeFabricacao())));
         veiculo.setNome(request.getNome());
         veiculo.setFrota(request.getFrota());
         veiculoRepository.save(veiculo);

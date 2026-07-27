@@ -11,6 +11,10 @@ export const baseService = {
     return response.data
   },
 
+  async atualizar(id: number, data: BaseDTORequest): Promise<void> {
+    await api.put(`/base/${id}`, data)
+  },
+
   async excluir(id: number): Promise<void> {
     await api.delete(`/base/${id}`)
   },

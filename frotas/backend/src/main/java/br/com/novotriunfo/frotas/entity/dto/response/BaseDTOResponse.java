@@ -13,6 +13,7 @@ import java.util.List;
 public class BaseDTOResponse {
     private Long id;
     private String nome;
-    private String localizacao;
-    List<VeiculoDTOResponse> veiculos;
+    private String telefone;
+    private String email;
+    private String responsavel;
 }

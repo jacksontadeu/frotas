@@ -35,9 +35,9 @@ const formatarData = (dataStr: string) => {
 
 const formatarTipo = (tipo: string) => {
   const map: Record<string, string> = {
-    preventiva: 'Preventiva',
-    corretiva: 'Corretiva',
-    inspecao: 'Inspeção',
+    PREVENTIVA: 'Preventiva',
+    CORRETIVA: 'Corretiva',
+    INSPECAO: 'Inspeção',
   }
   return map[tipo] || tipo
 }
@@ -109,9 +109,10 @@ onMounted(carregarManutencoes)
           </div>
 
           <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-            <span class="badge" :class="m.tipoManutencao === 'corretiva' ? 'badge-danger' : 'badge-purple'">
-              {{ formatarTipo(m.tipoManutencao) }}
-            </span>
+            <span class="badge" :class="m.tipoManutencao === 'CORRETIVA' ? 'badge-danger' : 'badge-purple'">
+  {{ formatarTipo(m.tipoManutencao) }}
+</span>
+
             <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">
               📍 {{ m.kilometragem }} Km
             </span>

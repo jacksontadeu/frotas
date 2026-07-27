@@ -56,9 +56,9 @@ export interface ManutencaoDTORequest {
 export interface BaseResponse {
   id: number
   nome: string
-  responsavel?: UsuarioResponse | null
-  localidade?: string
-  emailBase?: string
+  responsavel?: string
+  email: string
+  telefone: string
 }
 
 export interface VeiculoResponse {
@@ -96,11 +96,11 @@ export interface ManutencaoResponse {
 export type TipoVeiculo = 'CARRO' | 'CAMINHAO' | 'VAN'
 export const TIPOS_VEICULO: TipoVeiculo[] = ['CARRO', 'CAMINHAO', 'VAN']
 
-export type TipoManutencao = 'preventiva' | 'corretiva' | 'inspecao'
+export type TipoManutencao = 'PREVENTIVA' | 'CORRETIVA' | 'INSPECAO'
 export const TIPOS_MANUTENCAO = [
-  { value: 'preventiva', label: 'Preventiva' },
-  { value: 'corretiva', label: 'Corretiva' },
-  { value: 'inspecao', label: 'Inspeção' },
+  { value: 'PREVENTIVA', label: 'Preventiva' },
+  { value: 'CORRETIVA', label: 'Corretiva' },
+  { value: 'INSPECAO', label: 'Inspeção' },
 ]
 
 export type Servico =

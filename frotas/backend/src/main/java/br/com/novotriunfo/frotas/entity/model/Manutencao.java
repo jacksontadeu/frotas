@@ -37,7 +37,8 @@ public class Manutencao {
     private StatusManutencao status = StatusManutencao.EM_ABERTO;
 
     @ElementCollection(targetClass = Servico.class, fetch = FetchType.EAGER)
-    @CollectionTable(name = "manutencao_servicos", joinColumns = @JoinColumn(name = "manutencao_id"))
+    @CollectionTable(name = "manutencao_servicos",
+            joinColumns = @JoinColumn(name = "manutencao_id"))
     @Enumerated(EnumType.STRING)
     @Column(name = "servico")
     private Set<Servico> servicos = new HashSet<>();

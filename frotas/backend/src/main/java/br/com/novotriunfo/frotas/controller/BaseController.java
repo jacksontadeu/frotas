@@ -35,33 +35,24 @@ public class BaseController {
     }
     @PostMapping
     public ResponseEntity cadastarBase(@Valid @RequestBody BaseDTORequest request){
-        Optional<Usuario> usuario = usuarioService.buscarPorId(request.getUsuarioId());
-        if (usuario.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Usuário não encontrado");
-        }
-        Base base = new Base();
-        base.setNome(request.getNome());
-        base.setEmailBase(usuario.get().getEmail());
-        base.setTelefone(usuario.get().getTelefone());
-        baseService.cadastrarBase(base);
+        baseService.cadastrarBase(request);
         return ResponseEntity.status(HttpStatus.CREATED).body("Cadastrado com sucesso!!!");
 
     }
     @GetMapping("/{id}")
     public ResponseEntity<BaseDTOResponse> buscarPorId(@PathVariable Long id){
-        Optional<Base> base = baseService.buscarPorId(id);
-        if(base.isPresent()){
-            BaseDTOResponse response = modelMapper.map(base.get(), BaseDTOResponse.class);
-            return ResponseEntity.status(HttpStatus.OK).body(response);
-        }else{
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
+        BaseDTOResponse response = baseService.buscarPorId(id);
+        return ResponseEntity.status(HttpStatus.OK).body(response);
 
     }
     @GetMapping()
-    public ResponseEntity<List<BaseDTOEntityResponse>> listarTodas(){
-        List<Base> bases = baseService.listarTodas();
-        List<BaseDTOEntityResponse> lista = modelMapper.map(bases,new TypeToken<List<BaseDTOEntityResponse>>(){}.getType());
-        return  ResponseEntity.status(HttpStatus.OK).body(lista);
+    public ResponseEntity<List<BaseDTOResponse>> listarTodas(){
+        List<BaseDTOResponse> bases = baseService.listarTodas();
+        return ResponseEntity.status(HttpStatus.OK).body(bases);
+    }
+    @PutMapping("/{id}")
+    public ResponseEntity alterarBase(@PathVariable Long id, @Valid @RequestBody BaseDTORequest request){
+        baseService.alterarBase(id, request);
+        return ResponseEntity.status(HttpStatus.OK).body("Alterado com sucesso!!!");
     }
 }

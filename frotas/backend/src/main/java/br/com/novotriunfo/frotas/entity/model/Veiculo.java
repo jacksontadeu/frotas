@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Year;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -20,7 +22,10 @@ public class Veiculo {
     private String frota;
     private String placaVeiculo;
     private String cor;
-    private String anoDeFabricacao;
+    private Year anoDeFabricacao;
+
+    private Boolean ativo = true;
+    private String motivoInativacao;
 
     @Enumerated(EnumType.STRING)
     private TipoVeiculo tipoVeiculo;
@@ -30,6 +35,6 @@ public class Veiculo {
     private Base base;
 
     @OneToMany(mappedBy = "veiculo")
-    private List<Manutencao> manutencoes;
+    private List<Manutencao> manutencoes= new ArrayList<>();
 
 }

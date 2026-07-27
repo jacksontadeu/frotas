@@ -1,10 +1,10 @@
 package br.com.novotriunfo.frotas.entity.enums;
 
 public enum TipoManutencao {
-    L,
-    MP1,
-    MP2,
-    PREVENTIVA,
-    CORRETIVA,
-    INSPECAO;
+
+    PREVENTIVA_TROCA_DE_OLEO,
+    PREVENTIVA_KIT_CORREIA_DENTADA,
+
+    CORRETIVA
+
 }
