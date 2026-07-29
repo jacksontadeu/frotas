@@ -36,15 +36,15 @@ export interface VeiculoDTORequest {
   placaVeiculo: string
   frota: string
   base_id: number | null
-  tipoVeiculo: string
-  cor: string
+  tipoVeiculo: TipoVeiculo
+  cor: Cor
   anoDeFabricacao: number | null
 }
 
 export interface ManutencaoDTORequest {
   dataAgendamento: string
   kilometragem: number | null
-  tipoManutencao: string
+  tipoManutencao: TipoManutencao
   veiculo_id: number | null
   servicos?: Servico[]
 }
@@ -64,11 +64,11 @@ export interface BaseResponse {
 export interface VeiculoResponse {
   id: number
   nome: string
-  cor: string
+  cor: Cor
   placaVeiculo: string
   anoDeFabricacao: string
   frota: string
-  tipoVeiculo: string
+  tipoVeiculo: TipoVeiculo
   base: BaseResponse
 }
 
@@ -83,7 +83,7 @@ export interface ManutencaoResponse {
   dataAgendamento: string
   dataProximaManutencao: string | null
   kilometragem: number
-  tipoManutencao: string
+  tipoManutencao: TipoManutencao
   veiculo: VeiculoResponse
   status: 'EM_ABERTO' | 'FINALIZADA'
   servicos?: Servico[]
@@ -101,6 +101,18 @@ export const TIPOS_MANUTENCAO = [
   { value: 'PREVENTIVA_TROCA_DE_OLEO', label: 'Preventiva - Troca de Óleo' },
   { value: 'PREVENTIVA_KIT_CORREIA_DENTADA', label: 'Preventiva - Kit Correia Dentada' },
   { value: 'CORRETIVA', label: 'Corretiva' },
+]
+
+export enum Cor {
+  BRANCO = 'BRANCO',
+  PRATA = 'PRATA',
+  AZUL = 'AZUL',
+}
+
+export const CORES_VEICULO: Cor[] = [
+  Cor.BRANCO,
+  Cor.PRATA,
+  Cor.AZUL,
 ]
 
 export type Servico =

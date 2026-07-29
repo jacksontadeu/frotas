@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { veiculoService } from '../../services/veiculoService'
 import { baseService } from '../../services/baseService'
 import type { VeiculoDTORequest, BaseResponse } from '../../types'
-import { TIPOS_VEICULO } from '../../types'
+import { TIPOS_VEICULO, CORES_VEICULO } from '../../types'
 import AppModal from '../../components/AppModal.vue'
 import { extractErrorMessage } from '../../composables/useErrorMessage'
 
@@ -212,15 +212,18 @@ onMounted(carregarBases)
         <div class="row">
           <div class="form-group">
             <label for="vCor" class="form-label">Cor</label>
-            <input
+            <select
               id="vCor"
               v-model="form.cor"
-              type="text"
-              class="form-control"
-              placeholder="Ex: Branco"
+              class="form-select"
               required
               :disabled="loading"
-            />
+            >
+              <option value="" disabled selected>Selecione a cor</option>
+              <option v-for="cor in CORES_VEICULO" :key="cor" :value="cor">
+                {{ cor }}
+              </option>
+            </select>
           </div>
           <div class="form-group">
             <label for="vAno" class="form-label">Ano de Fabricação</label>

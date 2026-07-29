@@ -693,9 +693,15 @@ onMounted(carregarBases)
   gap: 1rem;
 }
 
+/* Layout puro, compartilhado entre cabeçalho e linhas de dados */
 .lt-col {
   display: flex;
   align-items: center;
+}
+
+/* Estilo tipográfico (uppercase, tamanho, peso) restrito ao cabeçalho,
+   para não vazar para as células de dados nas linhas da tabela */
+.list-table-header .lt-col {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.06em;

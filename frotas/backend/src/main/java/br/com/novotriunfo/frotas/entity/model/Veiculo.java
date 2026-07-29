@@ -2,12 +2,7 @@ package br.com.novotriunfo.frotas.entity.model;
 
 import br.com.novotriunfo.frotas.entity.enums.TipoVeiculo;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 
 import java.time.Year;
 import java.util.ArrayList;

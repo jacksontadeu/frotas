@@ -1,34 +1,23 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { manutencaoService } from '../../services/manutencaoService'
 import { veiculoService } from '../../services/veiculoService'
-import type { ManutencaoDTORequest, VeiculoResponse, Servico } from '../../types'
-import { TIPOS_MANUTENCAO, SERVICOS_LIST } from '../../types'
+import type { ManutencaoDTORequest, VeiculoResponse } from '../../types'
+import { TIPOS_MANUTENCAO } from '../../types'
 import AppModal from '../../components/AppModal.vue'
 import { extractErrorMessage } from '../../composables/useErrorMessage'
 
 const router = useRouter()
+const route = useRoute()
 
 const form = ref<ManutencaoDTORequest>({
   dataAgendamento: '',
   kilometragem: null,
   tipoManutencao: '',
   veiculo_id: null,
-  servicos: [],
 })
 
-function toggleServico(servico: Servico) {
-  if (!form.value.servicos) {
-    form.value.servicos = []
-  }
-  const index = form.value.servicos.indexOf(servico)
-  if (index > -1) {
-    form.value.servicos.splice(index, 1)
-  } else {
-    form.value.servicos.push(servico)
-  }
-}
 
 // --- Autocomplete de placa ---
 const placaInput = ref('')
@@ -122,7 +111,23 @@ function fecharModal() {
   }
 }
 
-onMounted(() => document.addEventListener('mousedown', handleClickOutside))
+onMounted(async () => {
+  document.addEventListener('mousedown', handleClickOutside)
+
+  // Pré-carrega veículo se vier da listagem via query param ?veiculoId=X
+  const veiculoId = route.query.veiculoId
+  if (veiculoId) {
+    try {
+      const todos = await veiculoService.listarTodos()
+      const encontrado = todos.find((v) => v.id === Number(veiculoId))
+      if (encontrado) {
+        selecionarSugestao(encontrado)
+      }
+    } catch {
+      // silencia erro de pré-carregamento
+    }
+  }
+})
 onBeforeUnmount(() => document.removeEventListener('mousedown', handleClickOutside))
 </script>
 
@@ -238,30 +243,6 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', handleClickOutsi
           </select>
         </div>
 
-        <!-- Serviços Solicitados (Opcional) -->
-        <div class="form-group">
-          <label class="form-label">Serviços Solicitados (Opcional)</label>
-          <div class="servicos-grid">
-            <label
-              v-for="s in SERVICOS_LIST"
-              :key="s.value"
-              class="servico-tile"
-              :class="{ selected: form.servicos?.includes(s.value) }"
-            >
-              <input
-                type="checkbox"
-                :value="s.value"
-                :checked="form.servicos?.includes(s.value)"
-                @change="toggleServico(s.value)"
-              />
-              <span class="servico-icon">{{ s.icon }}</span>
-              <div class="servico-info">
-                <span class="servico-label">{{ s.label }}</span>
-                <span class="servico-desc">{{ s.description }}</span>
-              </div>
-            </label>
-          </div>
-        </div>
 
         <div class="form-actions">
           <RouterLink to="/listagem/listar-manutencoes" class="btn btn-secondary">
