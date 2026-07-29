@@ -22,8 +22,10 @@ public class Manutencao {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private LocalDate dataRealizacao;
+    private LocalDate dataAgendamento;
+
     private LocalDate dataProximaManutencao;
+
     private Long kilometragem;
     
     @Enumerated(EnumType.STRING)

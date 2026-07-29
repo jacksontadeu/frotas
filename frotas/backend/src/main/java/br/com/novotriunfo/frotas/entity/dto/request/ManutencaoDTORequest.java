@@ -19,7 +19,7 @@ import java.util.Set;
 @NoArgsConstructor
 public class ManutencaoDTORequest {
 
-    private LocalDate dataRealizacao;
+    private LocalDate dataAgendamento;
 
     private Long kilometragem;
 

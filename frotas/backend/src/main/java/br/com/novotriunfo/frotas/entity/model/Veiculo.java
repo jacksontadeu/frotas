@@ -3,8 +3,11 @@ package br.com.novotriunfo.frotas.entity.model;
 import br.com.novotriunfo.frotas.entity.enums.TipoVeiculo;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.time.Year;
 import java.util.ArrayList;
@@ -13,10 +16,14 @@ import java.util.List;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"base", "manutencoes"})
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Veiculo {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
     private String nome;
     private String frota;

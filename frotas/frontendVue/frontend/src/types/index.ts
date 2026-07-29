@@ -42,7 +42,7 @@ export interface VeiculoDTORequest {
 }
 
 export interface ManutencaoDTORequest {
-  dataRealizacao: string
+  dataAgendamento: string
   kilometragem: number | null
   tipoManutencao: string
   veiculo_id: number | null
@@ -80,7 +80,7 @@ export interface AtendimentoDTORequest {
 
 export interface ManutencaoResponse {
   id: number
-  dataRealizacao: string
+  dataAgendamento: string
   dataProximaManutencao: string | null
   kilometragem: number
   tipoManutencao: string
@@ -96,11 +96,11 @@ export interface ManutencaoResponse {
 export type TipoVeiculo = 'CARRO' | 'CAMINHAO' | 'VAN'
 export const TIPOS_VEICULO: TipoVeiculo[] = ['CARRO', 'CAMINHAO', 'VAN']
 
-export type TipoManutencao = 'PREVENTIVA' | 'CORRETIVA' | 'INSPECAO'
+export type TipoManutencao = 'PREVENTIVA_TROCA_DE_OLEO' | 'PREVENTIVA_KIT_CORREIA_DENTADA' | 'CORRETIVA'
 export const TIPOS_MANUTENCAO = [
-  { value: 'PREVENTIVA', label: 'Preventiva' },
+  { value: 'PREVENTIVA_TROCA_DE_OLEO', label: 'Preventiva - Troca de Óleo' },
+  { value: 'PREVENTIVA_KIT_CORREIA_DENTADA', label: 'Preventiva - Kit Correia Dentada' },
   { value: 'CORRETIVA', label: 'Corretiva' },
-  { value: 'INSPECAO', label: 'Inspeção' },
 ]
 
 export type Servico =

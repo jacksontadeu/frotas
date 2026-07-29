@@ -1,11 +1,14 @@
 package br.com.novotriunfo.frotas.service;
 
 import br.com.novotriunfo.frotas.entity.dto.request.VeiculoDTORequest;
+import br.com.novotriunfo.frotas.entity.dto.response.BaseDTOResponse;
+import br.com.novotriunfo.frotas.entity.dto.response.VeiculoDTOResponse;
 import br.com.novotriunfo.frotas.entity.enums.TipoVeiculo;
 import br.com.novotriunfo.frotas.entity.model.Base;
 import br.com.novotriunfo.frotas.entity.model.Veiculo;
 import br.com.novotriunfo.frotas.repository.BaseRepository;
 import br.com.novotriunfo.frotas.repository.VeiculoRepository;
+import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -13,16 +16,19 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Year;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class VeiculoService {
 
     private final VeiculoRepository veiculoRepository;
     private final BaseRepository baseRepository;
+    private final ModelMapper modelMapper;
 
-    public VeiculoService(VeiculoRepository veiculoRepository, BaseRepository baseRepository) {
+    public VeiculoService(VeiculoRepository veiculoRepository, BaseRepository baseRepository, ModelMapper modelMapper) {
         this.veiculoRepository = veiculoRepository;
         this.baseRepository = baseRepository;
+        this.modelMapper = modelMapper;
     }
 
     public void cadastrarVeiculo(VeiculoDTORequest request) {
@@ -41,19 +47,43 @@ public class VeiculoService {
         veiculoRepository.save(veiculo);
     }
 
-    public List<Veiculo> listarTodos() {
-        return veiculoRepository.findAll();
+    public List<VeiculoDTOResponse> listarTodos() {
+        List<Veiculo> veiculos = veiculoRepository.findAll();
+        return veiculos.stream().map(veiculo -> {
+            VeiculoDTOResponse response = new VeiculoDTOResponse();
+            response.setId(veiculo.getId());
+            response.setPlacaVeiculo(veiculo.getPlacaVeiculo());
+            response.setBase(modelMapper.map(veiculo.getBase(), BaseDTOResponse.class));
+            response.setTipoVeiculo(String.valueOf(veiculo.getTipoVeiculo()));
+            response.setCor(veiculo.getCor());
+            response.setAnoDeFabricacao(String.valueOf(veiculo.getAnoDeFabricacao()));
+            response.setNome(veiculo.getNome());
+            response.setFrota(veiculo.getFrota());
+            return response;
+        }).collect(Collectors.toList());
     }
 
-    public Optional<Veiculo> buscarPorId(Long id) {
-        return Optional.ofNullable(veiculoRepository.findById(id).orElse(null));
-
+    public VeiculoDTOResponse buscarPorId(Long id) {
+        Optional<Veiculo> veiculo = veiculoRepository.findById(id);
+        if (veiculo.isPresent()) {
+            VeiculoDTOResponse response = modelMapper.map(veiculo.get(), VeiculoDTOResponse.class);
+            return response;
+        }
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Veículo não encontrado.");
     }
 
     public Boolean verificarPlaca(String placa) {
-        return veiculoRepository.existsByPlacaVeiculo(placa.toUpperCase());
+        Boolean existe = veiculoRepository.existsByPlacaVeiculo(placa.toUpperCase());
+        if (existe){
+            return true;
+        }
+        return false;
     }
     public Boolean verificarFrota(String frota) {
-        return veiculoRepository.existsByFrota(frota.toUpperCase());
+        Boolean existe = veiculoRepository.existsByFrota(frota.toUpperCase());
+        if (existe){
+            return true;
+        }
+        return false;
     }
 }

@@ -3,8 +3,11 @@ package br.com.novotriunfo.frotas.entity.model;
 import br.com.novotriunfo.frotas.entity.enums.Role;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,10 +20,14 @@ import java.util.Set;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"basesResponsavel"})
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Usuario implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
     private String nome;
     private String email;
@@ -36,14 +43,12 @@ public class Usuario implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        if(this.role == Role.ADMIN) {
-            return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
-        } else if (this.role == Role.TECNICO) {
-            return List.of(new SimpleGrantedAuthority("ROLE_TECNICO"));
-        } else  {
-            return List.of(new SimpleGrantedAuthority("ROLE_BASE"));
+        // Garante que sempre tenha prefixo ROLE_
+        String roleName = role.name();
+        if (!roleName.startsWith("ROLE_")) {
+            roleName = "ROLE_" + roleName;
         }
-
+        return Set.of(new SimpleGrantedAuthority(roleName));
     }
 
     @Override

@@ -11,7 +11,7 @@ import { extractErrorMessage } from '../../composables/useErrorMessage'
 const router = useRouter()
 
 const form = ref<ManutencaoDTORequest>({
-  dataRealizacao: '',
+  dataAgendamento: '',
   kilometragem: null,
   tipoManutencao: '',
   veiculo_id: null,
@@ -206,10 +206,10 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', handleClickOutsi
 
         <!-- Data Realização -->
         <div class="form-group">
-          <label for="mData" class="form-label">Data de Realização</label>
+          <label for="mData" class="form-label">Data de Agendamento</label>
           <input
             id="mData"
-            v-model="form.dataRealizacao"
+            v-model="form.dataAgendamento"
             type="date"
             class="form-control"
             required
@@ -270,7 +270,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', handleClickOutsi
           <button
             type="submit"
             class="btn btn-primary"
-            :disabled="loading || !form.veiculo_id || !form.dataRealizacao || !form.tipoManutencao"
+            :disabled="loading || !form.veiculo_id || !form.dataAgendamento || !form.tipoManutencao"
           >
             <span v-if="loading">⏳ Salvando...</span>
             <span v-else>🔧 Registrar Manutenção</span>

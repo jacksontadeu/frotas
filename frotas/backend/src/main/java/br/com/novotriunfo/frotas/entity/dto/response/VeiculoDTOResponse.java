@@ -10,7 +10,6 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class VeiculoDTOResponse {
-
     private Long id;
     private String nome;
     private String placaVeiculo;
@@ -18,5 +17,5 @@ public class VeiculoDTOResponse {
     private String anoDeFabricacao;
     private String frota;
     private String tipoVeiculo;
-    private BaseDTOEntityResponse base;
+    private BaseDTOResponse base;
 }

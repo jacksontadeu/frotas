@@ -35,13 +35,12 @@ const formatarData = (dataStr: string) => {
 
 const formatarTipo = (tipo: string) => {
   const map: Record<string, string> = {
-    PREVENTIVA: 'Preventiva',
+    PREVENTIVA_TROCA_DE_OLEO: 'Preventiva - Troca de Óleo',
+    PREVENTIVA_KIT_CORREIA_DENTADA: 'Preventiva - Kit Correia Dentada',
     CORRETIVA: 'Corretiva',
-    INSPECAO: 'Inspeção',
   }
   return map[tipo] || tipo
 }
-
 const getServicoInfo = (servico: Servico) => {
   return SERVICOS_LIST.find((s) => s.value === servico)
 }
@@ -102,8 +101,9 @@ onMounted(carregarManutencoes)
             </span>
             <div>
               <h5 style="margin: 0; font-weight: 700;">
-                {{ m.veiculo.nome }} 
-                <span class="text-muted" style="font-weight: 500; font-size: 0.85rem;">({{ m.veiculo.placaVeiculo }})</span>
+                {{ m.veiculo.nome }}
+                <span class="text-muted" style="font-weight: 500; font-size: 0.85rem;">({{ m.veiculo.placaVeiculo }})
+                  <template v-if="m.veiculo.base?.nome"> · {{ m.veiculo.base.nome }}</template></span>
               </h5>
             </div>
           </div>
@@ -117,7 +117,7 @@ onMounted(carregarManutencoes)
               📍 {{ m.kilometragem }} Km
             </span>
             <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">
-              📅 Realizada: {{ formatarData(m.dataRealizacao) }}
+              📅 Agendada: {{ formatarData(m.dataAgendamento) }}
             </span>
             <span v-if="m.dataProximaManutencao" style="font-size: 0.85rem; font-weight: 500; color: var(--color-success);">
               📅 Próxima: {{ formatarData(m.dataProximaManutencao) }}

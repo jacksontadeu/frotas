@@ -14,6 +14,7 @@ import org.modelmapper.TypeToken;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,35 +35,31 @@ public class VeiculoController {
     }
 
     @PostMapping()
-    public ResponseEntity<String> cadastrarVeiculo(@RequestBody VeiculoDTORequest request){
-
+    public ResponseEntity<String> cadastrarVeiculo(@RequestBody VeiculoDTORequest request) {
         veiculoService.cadastrarVeiculo(request);
         return ResponseEntity.status(HttpStatus.CREATED).body("Cadastrado com sucesso!!!");
     }
+
     @GetMapping()
-    public ResponseEntity<List<VeiculoDTOResponse>> listarTodos(){
-        List<Veiculo> veiculos = veiculoService.listarTodos();
-        List<VeiculoDTOResponse> lista = modelMapper.map(veiculos, new TypeToken<List<VeiculoDTOResponse>>(){}.getType());
-        return ResponseEntity.status(HttpStatus.OK).body(lista);
-    }
-    @GetMapping("/{id}")
-    public ResponseEntity<VeiculoDTOResponse> buscarPorId(@PathVariable Long id){
-        Optional<Veiculo> veiculoEntity = veiculoService.buscarPorId(id);
-        if(veiculoEntity.isPresent()){
-            VeiculoDTOResponse veiculo = modelMapper.map(veiculoEntity, VeiculoDTOResponse.class);
-            return ResponseEntity.status(HttpStatus.OK).body(veiculo);
-        }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-    }
-    @GetMapping("/placa/{placa}")
-    public ResponseEntity<Boolean> verificarPlaca(@PathVariable String placa){
-        Boolean existe = veiculoService.verificarPlaca(placa);
-        return ResponseEntity.status(HttpStatus.OK).body(existe);
-    }
-    @GetMapping("/frota/{frota}")
-    public ResponseEntity<Boolean> verificarFrota(@PathVariable String frota){
-        Boolean existe = veiculoService.verificarFrota(frota);
-        return ResponseEntity.status(HttpStatus.OK).body(existe);
+    public ResponseEntity<List<VeiculoDTOResponse>> listarTodos() {
+        List<VeiculoDTOResponse> veiculos = veiculoService.listarTodos();
+        return ResponseEntity.status(HttpStatus.OK).body(veiculos);
+
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<VeiculoDTOResponse> buscarPorId(@PathVariable Long id) {
+        VeiculoDTOResponse veiculo = veiculoService.buscarPorId(id);
+        return ResponseEntity.status(HttpStatus.OK).body(veiculo);
+    }
+
+    @GetMapping("/placa/{placa}")
+    public ResponseEntity<Boolean> verificarPlaca(@PathVariable String placa) {
+        return ResponseEntity.status(HttpStatus.OK).body(veiculoService.verificarPlaca(placa));
+    }
+
+    @GetMapping("/frota/{frota}")
+    public ResponseEntity<Boolean> verificarFrota(@PathVariable String frota) {
+        return ResponseEntity.status(HttpStatus.OK).body(veiculoService.verificarFrota(frota));
+    }
 }

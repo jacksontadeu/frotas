@@ -15,8 +15,7 @@ import java.util.Set;
 @AllArgsConstructor
 public class ManutencaoDTOResponse {
     private Long id;
-    private LocalDate dataRealizacao;
-    private LocalDate dataProximaManutencao;
+    private LocalDate dataAgendamento;
     private Long kilometragem;
     private String tipoManutencao;
     private VeiculoDTOResponse veiculo;
