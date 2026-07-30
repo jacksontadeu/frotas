@@ -206,6 +206,33 @@ function fecharFeedback() {
 }
 
 // ────────────────────────────────
+// Modal de Detalhes do Usuário
+// ────────────────────────────────
+const usuarioDetalhes = ref<UsuarioResponse | null>(null)
+
+function abrirDetalhes(usuario: UsuarioResponse) {
+  usuarioDetalhes.value = usuario
+}
+
+function fecharDetalhes() {
+  usuarioDetalhes.value = null
+}
+
+function editarPeloModalDetalhes() {
+  if (!usuarioDetalhes.value) return
+  const usuario = usuarioDetalhes.value
+  fecharDetalhes()
+  abrirEdicao(usuario)
+}
+
+function excluirPeloModalDetalhes() {
+  if (!usuarioDetalhes.value) return
+  const { id, nome } = usuarioDetalhes.value
+  fecharDetalhes()
+  confirmarExclusao(id, nome)
+}
+
+// ────────────────────────────────
 // Helpers de exibição
 // ────────────────────────────────
 const roleLabel: Record<string, string> = {
@@ -280,7 +307,8 @@ onMounted(carregarUsuarios)
           <tr
             v-for="usuario in usuariosFiltrados"
             :key="usuario.id"
-            class="user-row"
+            class="user-row clickable"
+            @click="abrirDetalhes(usuario)"
           >
             <td class="col-id">{{ usuario.id }}</td>
             <td class="col-nome">
@@ -301,7 +329,7 @@ onMounted(carregarUsuarios)
                 <button
                   class="btn btn-warning btn-sm"
                   title="Editar usuário"
-                  @click="abrirEdicao(usuario)"
+                  @click.stop="abrirEdicao(usuario)"
                 >
                   ✏️ Editar
                 </button>
@@ -309,7 +337,7 @@ onMounted(carregarUsuarios)
                   class="btn btn-danger btn-sm"
                   title="Excluir usuário"
                   :disabled="deletingId === usuario.id"
-                  @click="confirmarExclusao(usuario.id, usuario.nome)"
+                  @click.stop="confirmarExclusao(usuario.id, usuario.nome)"
                 >
                   {{ deletingId === usuario.id ? '⏳' : '🗑️' }} Excluir
                 </button>
@@ -320,6 +348,70 @@ onMounted(carregarUsuarios)
       </table>
     </div>
   </div>
+
+  <!-- ══════════════════════════════
+       Modal de Detalhes do Usuário
+       ══════════════════════════════ -->
+  <Teleport to="body">
+    <Transition name="modal-fade">
+      <div v-if="usuarioDetalhes" class="form-overlay" @click.self="fecharDetalhes">
+        <div class="detalhes-dialog">
+          <!-- Header -->
+          <div class="form-dialog-header">
+            <div class="detalhes-header-info">
+              <div class="user-avatar user-avatar-lg">{{ usuarioDetalhes.nome.charAt(0).toUpperCase() }}</div>
+              <div>
+                <h2 class="form-dialog-title" style="margin-bottom: 0.2rem;">{{ usuarioDetalhes.nome }}</h2>
+                <span :class="['badge', roleClass[usuarioDetalhes.role ?? ''] ?? 'badge-gray']">
+                  {{ roleLabel[usuarioDetalhes.role ?? ''] ?? usuarioDetalhes.role ?? '—' }}
+                </span>
+              </div>
+            </div>
+            <button class="form-dialog-close" title="Fechar" @click="fecharDetalhes">✕</button>
+          </div>
+
+          <!-- Body -->
+          <div class="detalhes-dialog-body">
+            <div class="modal-grid-info">
+              <div class="modal-info-item">
+                <span class="modal-info-label">🆔 ID</span>
+                <span class="modal-info-value">#{{ usuarioDetalhes.id }}</span>
+              </div>
+              <div class="modal-info-item">
+                <span class="modal-info-label">📧 E-mail</span>
+                <span class="modal-info-value">{{ usuarioDetalhes.email }}</span>
+              </div>
+              <div class="modal-info-item">
+                <span class="modal-info-label">📞 Telefone</span>
+                <span class="modal-info-value">{{ usuarioDetalhes.telefone || '—' }}</span>
+              </div>
+              <div class="modal-info-item">
+                <span class="modal-info-label">🔑 Perfil</span>
+                <span class="modal-info-value">
+                  {{ roleLabel[usuarioDetalhes.role ?? ''] ?? usuarioDetalhes.role ?? '—' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="form-dialog-footer">
+            <button
+              class="btn btn-danger"
+              :disabled="deletingId === usuarioDetalhes.id"
+              @click="excluirPeloModalDetalhes"
+            >
+              🗑️ Excluir
+            </button>
+            <button class="btn btn-warning" @click="editarPeloModalDetalhes">
+              ✏️ Editar
+            </button>
+            <button class="btn btn-secondary" @click="fecharDetalhes">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 
   <!-- ══════════════════════════════
        Modal Formulário (cadastro / edição)
@@ -473,6 +565,11 @@ onMounted(carregarUsuarios)
   margin-bottom: 1.5rem;
 }
 
+/* ── Elementos clicáveis ── */
+.clickable {
+  cursor: pointer;
+}
+
 /* ── Busca ── */
 .search-bar {
   position: relative;
@@ -561,6 +658,12 @@ onMounted(carregarUsuarios)
   flex-shrink: 0;
 }
 
+.user-avatar-lg {
+  width: 48px;
+  height: 48px;
+  font-size: 1.2rem;
+}
+
 .col-id {
   color: var(--text-secondary);
   font-size: 0.8rem;
@@ -596,7 +699,7 @@ onMounted(carregarUsuarios)
   border: 1px solid rgba(150,150,150,0.2);
 }
 
-/* ── Modal de formulário ── */
+/* ── Modal de formulário / detalhes (overlay compartilhado) ── */
 .form-overlay {
   position: fixed;
   inset: 0;
@@ -680,6 +783,60 @@ onMounted(carregarUsuarios)
   justify-content: flex-end;
   gap: 0.75rem;
   margin-top: 1.5rem;
+  padding: 0 1.6rem 1.6rem;
+}
+
+/* ── Modal de Detalhes do Usuário ── */
+.detalhes-dialog {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+  animation: dialogIn 0.22s cubic-bezier(0.34, 1.3, 0.64, 1);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.detalhes-header-info {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.detalhes-dialog-body {
+  padding: 1.2rem 1.6rem 1.6rem;
+}
+
+.modal-grid-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  background: var(--color-surface-alt, rgba(255,255,255,0.04));
+  border: 1px solid var(--color-border);
+  padding: 1rem;
+  border-radius: var(--radius-md, 10px);
+}
+
+.modal-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.modal-info-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.modal-info-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  word-break: break-word;
 }
 
 /* Validação inline */

@@ -77,6 +77,7 @@ export interface AtendimentoDTORequest {
   servicos?: Servico[]
   descricao?: string
   dataRealizacao?: string
+  kilometragem?: number
 }
 
 export interface ManutencaoResponse {
@@ -86,6 +87,7 @@ export interface ManutencaoResponse {
   dataRealizacao: string | null
   dataProximaManutencao: string | null
   kilometragem: number
+  descricao?: string
   tipoManutencao: TipoManutencao
   veiculo: VeiculoResponse
   status: 'EM_ABERTO' | 'FINALIZADA'

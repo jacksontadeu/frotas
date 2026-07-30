@@ -243,6 +243,31 @@ async function salvarEdicao() {
   }
 }
 
+// ── Modal de Detalhes da Base ────────────────────────────────────────────────
+const baseDetalhes = ref<BaseResponse | null>(null)
+
+function abrirDetalhesBase(base: BaseResponse) {
+  baseDetalhes.value = base
+}
+
+function fecharDetalhesBase() {
+  baseDetalhes.value = null
+}
+
+function editarPeloModalDetalhes() {
+  if (!baseDetalhes.value) return
+  const base = baseDetalhes.value
+  fecharDetalhesBase()
+  abrirEdicao(base)
+}
+
+function excluirPeloModalDetalhes() {
+  if (!baseDetalhes.value) return
+  const { id, nome } = baseDetalhes.value
+  fecharDetalhesBase()
+  confirmarExclusao(id, nome)
+}
+
 onMounted(carregarBases)
 </script>
 
@@ -312,7 +337,8 @@ onMounted(carregarBases)
       <div
         v-for="base in bases"
         :key="base.id"
-        class="base-card"
+        class="base-card clickable"
+        @click="abrirDetalhesBase(base)"
       >
         <!-- Stripe superior colorido -->
         <div class="base-card-stripe"></div>
@@ -356,13 +382,13 @@ onMounted(carregarBases)
 
         <!-- Ações -->
         <div class="base-card-footer">
-          <button class="btn-card-action btn-card-edit" @click="abrirEdicao(base)">
+          <button class="btn-card-action btn-card-edit" @click.stop="abrirEdicao(base)">
             ✏️ Alterar
           </button>
           <button
             class="btn-card-action btn-card-delete"
             :disabled="deletingId === base.id"
-            @click="confirmarExclusao(base.id, base.nome)"
+            @click.stop="confirmarExclusao(base.id, base.nome)"
           >
             {{ deletingId === base.id ? '⏳ Excluindo...' : '🗑️ Excluir' }}
           </button>
@@ -386,7 +412,8 @@ onMounted(carregarBases)
         <li
           v-for="base in bases"
           :key="base.id"
-          class="list-table-row"
+          class="list-table-row clickable"
+          @click="abrirDetalhesBase(base)"
         >
           <span class="lt-col lt-id">
             <span class="base-id-badge">#{{ base.id }}</span>
@@ -410,13 +437,13 @@ onMounted(carregarBases)
           <span class="lt-col lt-actions">
             <button
               class="btn-row-action btn-row-edit"
-              @click="abrirEdicao(base)"
+              @click.stop="abrirEdicao(base)"
               title="Alterar base"
             >✏️</button>
             <button
               class="btn-row-action btn-row-delete"
               :disabled="deletingId === base.id"
-              @click="confirmarExclusao(base.id, base.nome)"
+              @click.stop="confirmarExclusao(base.id, base.nome)"
               title="Excluir base"
             >{{ deletingId === base.id ? '⏳' : '🗑️' }}</button>
           </span>
@@ -424,6 +451,72 @@ onMounted(carregarBases)
       </ul>
     </div>
   </div>
+
+  <!-- ─────────────────────────────────────── Modal de Detalhes da Base ── -->
+  <Teleport to="body">
+    <Transition name="modal-fade">
+      <div v-if="baseDetalhes" class="modal-backdrop" @click.self="fecharDetalhesBase">
+        <Transition name="modal-pop">
+          <div v-if="baseDetalhes" class="detalhes-modal-card">
+            <!-- Topo colorido -->
+            <div class="base-card-stripe"></div>
+
+            <!-- Header -->
+            <div class="edit-modal-header">
+              <div class="detalhes-header-info">
+                <span class="base-id-badge">#{{ baseDetalhes.id }}</span>
+                <h3 style="margin-top: 0.3rem;">🏢 {{ baseDetalhes.nome }}</h3>
+              </div>
+              <button class="btn-close" @click="fecharDetalhesBase">✖</button>
+            </div>
+
+            <!-- Body -->
+            <div class="edit-modal-body">
+              <div class="modal-grid-info">
+                <div class="modal-info-item">
+                  <span class="modal-info-label">📧 Email</span>
+                  <span class="modal-info-value">{{ getEmail(baseDetalhes) || '—' }}</span>
+                </div>
+                <div class="modal-info-item">
+                  <span class="modal-info-label">📞 Telefone</span>
+                  <span class="modal-info-value">{{ getTelefone(baseDetalhes) || '—' }}</span>
+                </div>
+              </div>
+
+              <div class="modal-section">
+                <h4 class="modal-section-title">👤 Responsável</h4>
+                <div v-if="getResponsavelNome(baseDetalhes)" class="usuario-selecionado-card" style="margin-top: 0;">
+                  <div class="usuario-info-main">
+                    <span class="usuario-icon">👤</span>
+                    <div>
+                      <p class="usuario-nome-edit">{{ getResponsavelNome(baseDetalhes) }}</p>
+                      <p class="usuario-contato">
+                        <span>📧 {{ getEmail(baseDetalhes) || 'Não informado' }}</span>
+                        <span class="dot-sep">•</span>
+                        <span>📞 {{ getTelefone(baseDetalhes) || 'Não informado' }}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <p v-else class="text-muted-italic">Nenhum responsável definido para esta base.</p>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="edit-modal-footer">
+              <button class="btn-card-action btn-card-delete" style="flex: 0;" :disabled="deletingId === baseDetalhes.id" @click="excluirPeloModalDetalhes">
+                🗑️ Excluir
+              </button>
+              <button class="btn-card-action btn-card-edit" style="flex: 0;" @click="editarPeloModalDetalhes">
+                ✏️ Alterar
+              </button>
+              <button class="btn btn-secondary" @click="fecharDetalhesBase">Fechar</button>
+            </div>
+          </div>
+        </Transition>
+      </div>
+    </Transition>
+  </Teleport>
 
   <!-- ─────────────────────────────────────── Modal de Edição ── -->
   <Teleport to="body">
@@ -638,6 +731,11 @@ onMounted(carregarBases)
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+/* ── Elementos clicáveis ── */
+.clickable {
+  cursor: pointer;
 }
 
 /* ── Toggle Visualização ── */
@@ -985,7 +1083,7 @@ onMounted(carregarBases)
   cursor: not-allowed;
 }
 
-/* ── Modal de Edição ── */
+/* ── Modal de Edição / Detalhes (backdrop compartilhado) ── */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1043,6 +1141,7 @@ onMounted(carregarBases)
   flex: 1;
   display: flex;
   flex-direction: column;
+  gap: 1.25rem;
 }
 
 .edit-modal-footer {
@@ -1052,6 +1151,75 @@ onMounted(carregarBases)
   justify-content: flex-end;
   gap: 0.75rem;
   background: var(--color-surface-2);
+}
+
+/* ── Modal de Detalhes da Base ── */
+.detalhes-modal-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 560px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  overflow: hidden;
+}
+
+.detalhes-header-info h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.modal-grid-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+}
+
+.modal-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.modal-info-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.modal-info-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.modal-section-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.text-muted-italic {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
 }
 
 /* ── Modal de Busca ── */

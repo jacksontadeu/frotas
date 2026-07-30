@@ -20,6 +20,7 @@ public class ManutencaoDTOResponse {
     private String numeroManutencao;
     private Long kilometragem;
     private String tipoManutencao;
+    private String descricao;
     private VeiculoDTOResponse veiculo;
     private StatusManutencao status;
     private Set<Servico> servicos;

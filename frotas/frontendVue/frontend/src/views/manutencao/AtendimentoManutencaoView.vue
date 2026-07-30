@@ -4,12 +4,29 @@ import { manutencaoService } from '../../services/manutencaoService'
 import { extractErrorMessage } from '../../composables/useErrorMessage'
 import type { ManutencaoResponse, Servico } from '../../types'
 import { SERVICOS_LIST } from '../../types'
+import AppModal from '../../components/AppModal.vue'
 
 const manutencoes = ref<ManutencaoResponse[]>([])
 const loading = ref(true)
 const submitting = ref<number | null>(null)
-const error = ref<string | null>(null)
-const success = ref<string | null>(null)
+
+// ── Estado do Modal de Feedback (AppModal) ──────────────────────────────────
+const showModal = ref(false)
+const modalType = ref<'success' | 'error'>('success')
+const modalMessage = ref('')
+
+function dispararModal(tipo: 'success' | 'error', mensagem: string) {
+  modalType.value = tipo
+  modalMessage.value = mensagem
+  showModal.value = true
+}
+
+function fecharModal() {
+  showModal.value = false
+  if (modalType.value === 'success') {
+    carregarManutencoes()
+  }
+}
 
 // ID da manutenção atualmente expandida
 const expandedId = ref<number | null>(null)
@@ -79,10 +96,10 @@ const manutencoesFiltradas = computed(() => {
 async function carregarManutencoes() {
   try {
     loading.value = true
-    error.value = null
     manutencoes.value = await manutencaoService.listarAbertas()
   } catch (err: any) {
-    error.value = extractErrorMessage(err, 'Erro ao carregar manutenções em aberto. Verifique se o servidor está rodando.')
+    const msg = extractErrorMessage(err, 'Erro ao carregar manutenções em aberto. Verifique se o servidor está rodando.')
+    dispararModal('error', msg)
   } finally {
     loading.value = false
   }
@@ -103,8 +120,6 @@ function toggleExpand(manutencao: ManutencaoResponse) {
     formDataRealizacao.value = manutencao.dataRealizacao
     formDescricaoServico.value = manutencao.descricaoServico ?? ''
   }
-  success.value = null
-  error.value = null
 }
 
 function isServicoSelecionado(servico: Servico): boolean {
@@ -122,11 +137,11 @@ function toggleServico(servico: Servico) {
 
 async function finalizarAtendimento(id: number) {
   const manutencao = manutencoes.value.find((m) => m.id === id)
-  const isCorretiva = manutencao?.tipoManutencao === 'corretiva'
+  
+  // Normalizando para caixa alta antes de comparar
+  const isCorretiva = manutencao?.tipoManutencao?.toUpperCase() === 'CORRETIVA'
 
   submitting.value = id
-  error.value = null
-  success.value = null
   try {
     await manutencaoService.atender(id, {
       servicos: isCorretiva ? [] : servicosSelecionados.value,
@@ -134,15 +149,12 @@ async function finalizarAtendimento(id: number) {
       kilometragem: formKilometragem.value,
       dataRealizacao: formDataRealizacao.value,
     })
-    success.value = 'Manutenção concluída com sucesso!'
+    
     expandedId.value = null
-    // Aguarda um momento e recarrega a lista
-    setTimeout(() => {
-      carregarManutencoes()
-      success.value = null
-    }, 1500)
+    dispararModal('success', 'Manutenção concluída com sucesso!')
   } catch (err: any) {
-    error.value = err?.response?.data?.message || 'Erro ao finalizar atendimento da manutenção.'
+    const msg = extractErrorMessage(err, 'Erro ao finalizar atendimento da manutenção.')
+    dispararModal('error', msg)
   } finally {
     submitting.value = null
   }
@@ -161,12 +173,13 @@ const formatarData = (dataStr: string) => {
 }
 
 const formatarTipo = (tipo: string) => {
+  if (!tipo) return ''
   const map: Record<string, string> = {
     preventiva: 'Preventiva',
     corretiva: 'Corretiva',
     inspecao: 'Inspeção',
   }
-  return map[tipo] || tipo
+  return map[tipo.toLowerCase()] || tipo
 }
 
 onMounted(carregarManutencoes)
@@ -206,7 +219,7 @@ onMounted(carregarManutencoes)
     </div>
 
     <!-- Barra de Filtros -->
-    <div v-if="!loading && !error && manutencoes.length > 0" class="filtros-bar">
+    <div v-if="!loading && manutencoes.length > 0" class="filtros-bar">
       <div class="busca-wrap">
         <span class="busca-icon">🔍</span>
         <input
@@ -241,16 +254,6 @@ onMounted(carregarManutencoes)
       <button v-if="temFiltroAtivo" class="btn btn-secondary btn-sm limpar-btn" @click="limparFiltros">
         ✖ Limpar filtros
       </button>
-    </div>
-
-    <!-- Alert Success -->
-    <div v-if="success" class="alert alert-success" style="margin-bottom: 1.5rem; text-align: center;">
-      🎉 {{ success }}
-    </div>
-
-    <!-- Alert Error -->
-    <div v-if="error" class="alert alert-danger" style="margin-bottom: 1.5rem;">
-      ⚠️ {{ error }}
     </div>
 
     <!-- Loading -->
@@ -300,7 +303,7 @@ onMounted(carregarManutencoes)
           </div>
 
           <div class="manutencao-status-info">
-            <span class="badge" :class="m.tipoManutencao === 'CORRETIVA' ? 'badge-danger' : 'badge-purple'">
+            <span class="badge" :class="m.tipoManutencao?.toUpperCase() === 'CORRETIVA' ? 'badge-danger' : 'badge-purple'">
               {{ formatarTipo(m.tipoManutencao) }}
             </span>
             <span class="header-km">📍 {{ m.kilometragem }} Km</span>
@@ -341,7 +344,7 @@ onMounted(carregarManutencoes)
             </div>
 
             <!-- Corretiva: campo de descrição livre -->
-            <template v-if="m.tipoManutencao === 'CORRETIVA'">
+            <template v-if="m.tipoManutencao?.toUpperCase() === 'CORRETIVA'">
               <h5 class="checklist-title">🔧 Descrição do Serviço Realizado</h5>
               <p class="checklist-subtitle">Descreva detalhadamente o serviço corretivo executado no veículo:</p>
               <div class="descricao-corretiva-wrap">
@@ -415,6 +418,14 @@ onMounted(carregarManutencoes)
         </Transition>
       </div>
     </div>
+
+    <!-- Modal de Resultado -->
+    <AppModal
+      :show="showModal"
+      :type="modalType"
+      :message="modalMessage"
+      @close="fecharModal"
+    />
   </div>
 </template>
 
