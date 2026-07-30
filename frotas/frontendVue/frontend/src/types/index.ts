@@ -69,12 +69,13 @@ export interface VeiculoResponse {
   anoDeFabricacao: string
   frota: string
   tipoVeiculo: TipoVeiculo
+  kilometragemAtual: number | null
   base: BaseResponse
 }
 
 export interface AtendimentoDTORequest {
   servicos?: Servico[]
-  kilometragem?: number | null
+  descricao?: string
   dataRealizacao?: string
 }
 

@@ -18,4 +18,5 @@ public class AtendimentoDTORequest {
     private Set<Servico> servicos = new HashSet<>();
     private Long kilometragem;
     private LocalDate dataRealizacao;
+    private String descricao;
 }

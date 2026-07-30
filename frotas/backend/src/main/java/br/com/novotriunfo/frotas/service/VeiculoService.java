@@ -59,6 +59,7 @@ public class VeiculoService {
             response.setAnoDeFabricacao(String.valueOf(veiculo.getAnoDeFabricacao()));
             response.setNome(veiculo.getNome());
             response.setFrota(veiculo.getFrota());
+            response.setKilometragemAtual(veiculo.getKilometragemAtual());
             return response;
         }).collect(Collectors.toList());
     }
@@ -85,5 +86,33 @@ public class VeiculoService {
             return true;
         }
         return false;
+    }
+    public void atualizarKilometragem(Long veiculoId, Long novaKilometragem) {
+        Optional<Veiculo> veiculoOpt = veiculoRepository.findById(veiculoId);
+        if (veiculoOpt.isPresent()) {
+            Veiculo veiculo = veiculoOpt.get();
+            if(novaKilometragem < veiculo.getKilometragemAtual()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A nova quilometragem não pode ser menor que a atual.");
+            }
+            veiculo.setKilometragemAtual(novaKilometragem);
+            veiculoRepository.save(veiculo);
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Veículo não encontrado.");
+        }
+    }
+    public void alterarBaseVeiculo(Long veiculoId, Long baseId) {
+        Optional<Veiculo> veiculoOpt = veiculoRepository.findById(veiculoId);
+        Optional<Base> baseOpt = baseRepository.findById(baseId);
+        if (veiculoOpt.isPresent() && baseOpt.isPresent()) {
+            Veiculo veiculo = veiculoOpt.get();
+            Base base = baseOpt.get();
+            if(veiculo.getBase().getId().equals(base.getId())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "O veículo já está associado a esta base.");
+            }
+            veiculo.setBase(base);
+            veiculoRepository.save(veiculo);
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Veículo ou Base não encontrado.");
+        }
     }
 }

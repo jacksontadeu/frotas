@@ -2,7 +2,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { veiculoService } from '../../services/veiculoService'
-import type { VeiculoResponse } from '../../types'
+import { manutencaoService } from '../../services/manutencaoService'
+import { baseService } from '../../services/baseService'
+import type { VeiculoResponse, ManutencaoResponse, BaseResponse } from '../../types'
 import AppModal from '../../components/AppModal.vue'
 import { extractErrorMessage } from '../../composables/useErrorMessage'
 
@@ -18,11 +20,60 @@ const modalMessage = ref('')
 const pendingDeleteId = ref<number | null>(null)
 const pendingDeleteNome = ref('')
 
+// ── Manutenções por veículo ──────────────────────────────────────────────────
+const manutencoes = ref<ManutencaoResponse[]>([])
+
+/** Retorna a manutenção mais recente (maior id) de cada veículo */
+const ultimaManutencaoPorVeiculo = computed(() => {
+  const mapa = new Map<number, ManutencaoResponse>()
+  for (const m of manutencoes.value) {
+    if (!m.veiculo?.id) continue
+    const existente = mapa.get(m.veiculo.id)
+    if (!existente || m.id > existente.id) {
+      mapa.set(m.veiculo.id, m)
+    }
+  }
+  return mapa
+})
+
+function getUltimaManutencao(veiculoId: number): ManutencaoResponse | undefined {
+  return ultimaManutencaoPorVeiculo.value.get(veiculoId)
+}
+
+function formatarKm(km: number | null | undefined): string {
+  if (km == null) return '—'
+  return km.toLocaleString('pt-BR') + ' km'
+}
+
+function formatarData(data: string | null | undefined): string {
+  if (!data) return '—'
+  const [ano, mes, dia] = data.split('T')[0].split('-')
+  return `${dia}/${mes}/${ano}`
+}
+
+type StatusManutencao = 'ok' | 'alerta' | 'vencida' | 'sem-info'
+
+function statusProximaManutencao(data: string | null | undefined): StatusManutencao {
+  if (!data) return 'sem-info'
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+  const proxima = new Date(data + 'T00:00:00')
+  const diffDias = Math.ceil((proxima.getTime() - hoje.getTime()) / 86400000)
+  if (diffDias < 0) return 'vencida'
+  if (diffDias <= 30) return 'alerta'
+  return 'ok'
+}
+
 async function carregarVeiculos() {
   try {
     loading.value = true
     error.value = null
-    veiculos.value = await veiculoService.listarTodos()
+    const [veiculosData, manutencoesData] = await Promise.all([
+      veiculoService.listarTodos(),
+      manutencaoService.listarTodas(),
+    ])
+    veiculos.value = veiculosData
+    manutencoes.value = manutencoesData
   } catch {
     error.value = 'Erro ao carregar veículos. Verifique se o servidor está rodando.'
   } finally {
@@ -72,6 +123,83 @@ const tipoIcon: Record<string, string> = {
   CARRO: '🚗',
   CAMINHAO: '🚛',
   VAN: '🚐',
+}
+
+// ── Modal Trocar Base ────────────────────────────────────────────────────────
+const showModalBase = ref(false)
+const basesDisponiveis = ref<BaseResponse[]>([])
+const baseSelecionadaId = ref<number | null>(null)
+const veiculoAlvoBase = ref<VeiculoResponse | null>(null)
+const salvandoBase = ref(false)
+
+async function abrirModalBase(veiculo: VeiculoResponse) {
+  veiculoAlvoBase.value = veiculo
+  baseSelecionadaId.value = veiculo.base?.id ?? null
+  basesDisponiveis.value = await baseService.listarTodas()
+  showModalBase.value = true
+}
+
+async function confirmarTrocaBase() {
+  if (!veiculoAlvoBase.value || !baseSelecionadaId.value) return
+  try {
+    salvandoBase.value = true
+    await veiculoService.trocarBase(veiculoAlvoBase.value.id, baseSelecionadaId.value)
+    // Atualiza localmente
+    const baseNova = basesDisponiveis.value.find((b) => b.id === baseSelecionadaId.value)!
+    const idx = veiculos.value.findIndex((v) => v.id === veiculoAlvoBase.value!.id)
+    if (idx !== -1) veiculos.value[idx] = { ...veiculos.value[idx], base: baseNova }
+    showModalBase.value = false
+    modalType.value = 'success'
+    modalMessage.value = `Base do veículo "${veiculoAlvoBase.value.nome}" alterada para "${baseNova.nome}" com sucesso!`
+    showModal.value = true
+  } catch (e: any) {
+    showModalBase.value = false
+    modalType.value = 'error'
+    modalMessage.value = extractErrorMessage(e, 'Erro ao trocar a base do veículo.')
+    showModal.value = true
+  } finally {
+    salvandoBase.value = false
+  }
+}
+
+// ── Modal Atualizar Kilometragem ─────────────────────────────────────────────
+const showModalKm = ref(false)
+const novaKm = ref<number | null>(null)
+const kmMinima = ref(0)
+const veiculoAlvoKm = ref<VeiculoResponse | null>(null)
+const salvandoKm = ref(false)
+const erroKm = ref<string | null>(null)
+
+function abrirModalKm(veiculo: VeiculoResponse) {
+  veiculoAlvoKm.value = veiculo
+  kmMinima.value = veiculo.kilometragemAtual ?? 0
+  novaKm.value = null
+  erroKm.value = null
+  showModalKm.value = true
+}
+
+async function confirmarAtualizacaoKm() {
+  if (!veiculoAlvoKm.value || novaKm.value == null) return
+  if (novaKm.value < kmMinima.value) {
+    erroKm.value = `A kilometragem não pode ser menor que a atual (${kmMinima.value.toLocaleString('pt-BR')} km).`
+    return
+  }
+  try {
+    salvandoKm.value = true
+    erroKm.value = null
+    await veiculoService.atualizarKilometragem(veiculoAlvoKm.value.id, novaKm.value)
+    // Atualiza localmente
+    const idx = veiculos.value.findIndex((v) => v.id === veiculoAlvoKm.value!.id)
+    if (idx !== -1) veiculos.value[idx] = { ...veiculos.value[idx], kilometragemAtual: novaKm.value }
+    showModalKm.value = false
+    modalType.value = 'success'
+    modalMessage.value = `Kilometragem do veículo "${veiculoAlvoKm.value.nome}" atualizada para ${novaKm.value.toLocaleString('pt-BR')} km!`
+    showModal.value = true
+  } catch (e: any) {
+    erroKm.value = extractErrorMessage(e, 'Erro ao atualizar a kilometragem.')
+  } finally {
+    salvandoKm.value = false
+  }
 }
 
 // ── Modo de visualização (persistido) ───────────────────────────────────────
@@ -270,14 +398,64 @@ onMounted(carregarVeiculos)
                   <span class="info-value">{{ veiculo.anoDeFabricacao || '—' }}</span>
                 </div>
               </div>
+
+              <!-- Kilometragem -->
+              <div class="info-row">
+                <span class="info-icon">🛣️</span>
+                <div class="info-text">
+                  <span class="info-label">Kilometragem Atual</span>
+                  <span class="info-value">{{ formatarKm(veiculo.kilometragemAtual) }}</span>
+                </div>
+              </div>
+
+              <!-- Próxima Manutenção -->
+              <div class="info-row">
+                <span class="info-icon">🔔</span>
+                <div class="info-text">
+                  <span class="info-label">Próxima Manutenção</span>
+                  <span
+                    class="info-value proxima-manutencao"
+                    :class="'status-' + statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao)"
+                  >
+                    <span
+                      v-if="statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) === 'vencida'"
+                      class="status-dot dot-vencida"
+                    ></span>
+                    <span
+                      v-else-if="statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) === 'alerta'"
+                      class="status-dot dot-alerta"
+                    ></span>
+                    <span
+                      v-else-if="statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) === 'ok'"
+                      class="status-dot dot-ok"
+                    ></span>
+                    {{ formatarData(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) }}
+                  </span>
+                </div>
+              </div>
             </div>
 
             <div class="veiculo-card-footer">
               <button
                 class="btn-card-action btn-card-manutencao"
                 @click="navegarParaManutencao(veiculo.id)"
+                title="Registrar manutenção"
               >
                 🔧 Manutenção
+              </button>
+              <button
+                class="btn-card-action btn-card-km"
+                @click="abrirModalKm(veiculo)"
+                title="Atualizar kilometragem"
+              >
+                🛣️ KM
+              </button>
+              <button
+                class="btn-card-action btn-card-base"
+                @click="abrirModalBase(veiculo)"
+                title="Trocar base"
+              >
+                🏢 Base
               </button>
               <button
                 class="btn-card-action btn-card-delete"
@@ -318,6 +496,17 @@ onMounted(carregarVeiculos)
                 <span>📋 Frota: {{ veiculo.frota }}</span>
                 <span>🎨 Cor: {{ veiculo.cor }}</span>
                 <span>📅 Ano: {{ veiculo.anoDeFabricacao }}</span>
+                <span>🛣️ KM: <strong>{{ formatarKm(veiculo.kilometragemAtual) }}</strong></span>
+                <span
+                  :class="'list-proxima status-' + statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao)"
+                >
+                  <span
+                    v-if="statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) !== 'sem-info'"
+                    class="status-dot"
+                    :class="'dot-' + statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao)"
+                  ></span>
+                  🔔 Próx. Manutenção: <strong>{{ formatarData(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) }}</strong>
+                </span>
               </p>
             </div>
             <div class="list-item-actions">
@@ -326,6 +515,18 @@ onMounted(carregarVeiculos)
                 @click="navegarParaManutencao(veiculo.id)"
               >
                 🔧 Manutenção
+              </button>
+              <button
+                class="btn btn-km btn-sm"
+                @click="abrirModalKm(veiculo)"
+              >
+                🛣️ Atualizar KM
+              </button>
+              <button
+                class="btn btn-base btn-sm"
+                @click="abrirModalBase(veiculo)"
+              >
+                🏢 Trocar Base
               </button>
               <button
                 class="btn btn-danger btn-sm"
@@ -341,7 +542,7 @@ onMounted(carregarVeiculos)
     </div>
   </div>
 
-  <!-- Modal -->
+  <!-- Modal de confirmação/exclusão -->
   <AppModal
     :show="showModal"
     :type="modalType"
@@ -351,6 +552,105 @@ onMounted(carregarVeiculos)
     @close="fecharModal"
     @confirm="executarExclusao"
   />
+
+  <!-- ── Modal Trocar Base ── -->
+  <Teleport to="body">
+    <Transition name="modal-fade">
+      <div v-if="showModalBase" class="custom-modal-overlay" @click.self="showModalBase = false">
+        <div class="custom-modal" role="dialog" aria-modal="true">
+          <div class="custom-modal-header">
+            <span class="custom-modal-icon">🏢</span>
+            <h2 class="custom-modal-title">Trocar Base</h2>
+            <button class="custom-modal-close" @click="showModalBase = false">✕</button>
+          </div>
+          <div class="custom-modal-body">
+            <p class="custom-modal-subtitle">
+              Veículo: <strong>{{ veiculoAlvoBase?.nome }}</strong>
+              — Base atual: <strong>{{ veiculoAlvoBase?.base?.nome ?? '—' }}</strong>
+            </p>
+            <div class="base-select-wrap">
+              <span class="base-select-icon">🏢</span>
+              <select
+                id="select-base"
+                v-model.number="baseSelecionadaId"
+                class="form-control base-select"
+              >
+                <option :value="null" disabled>Selecione uma base...</option>
+                <option
+                  v-for="base in basesDisponiveis"
+                  :key="base.id"
+                  :value="base.id"
+                >
+                  {{ base.nome }}
+                </option>
+              </select>
+              <span class="base-select-arrow">▾</span>
+            </div>
+          </div>
+          <div class="custom-modal-footer">
+            <button class="btn btn-secondary" @click="showModalBase = false">Cancelar</button>
+            <button
+              class="btn btn-primary"
+              :disabled="salvandoBase || !baseSelecionadaId"
+              @click="confirmarTrocaBase"
+            >
+              {{ salvandoBase ? '⏳ Salvando...' : '✅ Confirmar Troca' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- ── Modal Atualizar Kilometragem ── -->
+  <Teleport to="body">
+    <Transition name="modal-fade">
+      <div v-if="showModalKm" class="custom-modal-overlay" @click.self="showModalKm = false">
+        <div class="custom-modal custom-modal--sm" role="dialog" aria-modal="true">
+          <div class="custom-modal-header">
+            <span class="custom-modal-icon">🛣️</span>
+            <h2 class="custom-modal-title">Atualizar Kilometragem</h2>
+            <button class="custom-modal-close" @click="showModalKm = false">✕</button>
+          </div>
+          <div class="custom-modal-body">
+            <p class="custom-modal-subtitle">
+              Veículo: <strong>{{ veiculoAlvoKm?.nome }}</strong>
+            </p>
+            <div class="km-atual-info">
+              <span class="km-atual-label">KM atual registrada</span>
+              <span class="km-atual-valor">{{ (veiculoAlvoKm?.kilometragemAtual ?? 0).toLocaleString('pt-BR') }} km</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="input-nova-km">Nova Kilometragem</label>
+              <div class="km-input-wrap">
+                <input
+                  id="input-nova-km"
+                  v-model.number="novaKm"
+                  type="number"
+                  class="form-control km-input"
+                  :min="kmMinima"
+                  placeholder="Ex: 125000"
+                  @keyup.enter="confirmarAtualizacaoKm"
+                />
+                <span class="km-input-suffix">km</span>
+              </div>
+              <p v-if="erroKm" class="km-erro">⚠️ {{ erroKm }}</p>
+            </div>
+          </div>
+          <div class="custom-modal-footer">
+            <button class="btn btn-secondary" @click="showModalKm = false">Cancelar</button>
+            <button
+              class="btn btn-primary"
+              :disabled="salvandoKm || novaKm == null"
+              @click="confirmarAtualizacaoKm"
+            >
+              {{ salvandoKm ? '⏳ Salvando...' : '✅ Atualizar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -683,6 +983,68 @@ onMounted(carregarVeiculos)
   cursor: not-allowed;
 }
 
+/* ── Status Próxima Manutenção ── */
+.proxima-manutencao {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: pulse-dot 2s infinite;
+}
+
+.dot-vencida {
+  background: #ef4444;
+  box-shadow: 0 0 0 0 rgba(239,68,68,0.5);
+}
+
+.dot-alerta {
+  background: #f59e0b;
+  box-shadow: 0 0 0 0 rgba(245,158,11,0.5);
+}
+
+.dot-ok {
+  background: #22c55e;
+  box-shadow: 0 0 0 0 rgba(34,197,94,0.5);
+  animation: none;
+}
+
+@keyframes pulse-dot {
+  0%   { transform: scale(1); opacity: 1; }
+  50%  { transform: scale(1.4); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.status-vencida .info-value,
+.status-vencida {
+  color: #f87171 !important;
+}
+
+.status-alerta .info-value,
+.status-alerta {
+  color: #fbbf24 !important;
+}
+
+.status-ok .info-value,
+.status-ok {
+  color: #4ade80 !important;
+}
+
+/* lista: span de próxima manutenção */
+.list-proxima {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: inherit;
+}
+
 @media (max-width: 576px) {
   .filtros-bar {
     flex-direction: column;
@@ -691,5 +1053,247 @@ onMounted(carregarVeiculos)
   .ordenacao-wrap {
     min-width: 0;
   }
+}
+
+/* ── Botões novos nos cards ── */
+.btn-card-km {
+  background: rgba(56, 189, 248, 0.1);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.25);
+}
+.btn-card-km:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.btn-card-base {
+  background: rgba(139, 92, 246, 0.1);
+  color: #a78bfa;
+  border-color: rgba(139, 92, 246, 0.25);
+}
+.btn-card-base:hover {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.5);
+}
+
+/* ── Botões novos na lista ── */
+.btn-km {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+.btn-km:hover {
+  background: rgba(56, 189, 248, 0.22);
+}
+
+.btn-base {
+  background: rgba(139, 92, 246, 0.12);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+.btn-base:hover {
+  background: rgba(139, 92, 246, 0.22);
+}
+
+/* ── Modais customizados ── */
+.custom-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+
+.custom-modal {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+}
+
+.custom-modal--sm {
+  max-width: 420px;
+}
+
+.custom-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  flex-shrink: 0;
+}
+
+.custom-modal-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.custom-modal-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.custom-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+.custom-modal-close:hover {
+  background: var(--color-surface-3);
+  color: var(--text-primary);
+}
+
+.custom-modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.custom-modal-subtitle {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.custom-modal-footer {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  flex-shrink: 0;
+}
+
+/* ── Dropdown de seleção de base ── */
+.base-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.base-select-icon {
+  position: absolute;
+  left: 0.9rem;
+  font-size: 1rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.base-select {
+  padding-left: 2.5rem !important;
+  padding-right: 2.5rem !important;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  border-color: rgba(139, 92, 246, 0.35) !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.base-select:focus {
+  border-color: #a78bfa !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18) !important;
+  outline: none;
+}
+
+.base-select-arrow {
+  position: absolute;
+  right: 0.9rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* ── Input de kilometragem ── */
+.km-atual-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.km-atual-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.km-atual-valor {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.km-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.km-input {
+  padding-right: 3rem !important;
+}
+
+.km-input-suffix {
+  position: absolute;
+  right: 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.km-erro {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: #f87171;
+  line-height: 1.4;
+}
+
+/* ── Animação dos modais ── */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.modal-fade-enter-active .custom-modal,
+.modal-fade-leave-active .custom-modal {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+.modal-fade-enter-from .custom-modal {
+  transform: scale(0.92) translateY(12px);
+  opacity: 0;
 }
 </style>

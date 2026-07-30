@@ -194,20 +194,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', handleClickOutsi
           </div>
         </div>
 
-        <!-- Quilometragem -->
-        <div class="form-group">
-          <label for="mKm" class="form-label">Quilometragem Atual</label>
-          <input
-            id="mKm"
-            v-model.number="form.kilometragem"
-            type="number"
-            class="form-control"
-            placeholder="Ex: 125000"
-            min="0"
-            required
-            :disabled="loading"
-          />
-        </div>
+       
 
         <!-- Data Realização -->
         <div class="form-group">

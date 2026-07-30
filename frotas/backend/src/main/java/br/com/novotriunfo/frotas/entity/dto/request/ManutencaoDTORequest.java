@@ -21,8 +21,6 @@ public class ManutencaoDTORequest {
 
     private LocalDate dataAgendamento;
 
-    private Long kilometragem;
-
     private String tipoManutencao;
 
     private Long veiculo_id;

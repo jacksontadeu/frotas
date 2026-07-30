@@ -30,6 +30,8 @@ public class Manutencao {
 
     private LocalDate dataRealizacao;
 
+    private String descricao;
+
     private Long kilometragem;
     
     @Enumerated(EnumType.STRING)

@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -32,6 +33,9 @@ public class ManutencaoService {
     }
 
     public void cadastrarMauntencao(ManutencaoDTORequest request) {
+        if(request.getDataAgendamento().isBefore(LocalDate.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A data de agendamento não pode ser anterior a data atual");
+        }
         Manutencao manutencao = modelMapper.map(request, Manutencao.class);
         manutencao.setTipoManutencao(TipoManutencao.valueOf(String.valueOf(request.getTipoManutencao())));
         Optional<Veiculo> veiculo = veiculoRepository.findById(request.getVeiculo_id());

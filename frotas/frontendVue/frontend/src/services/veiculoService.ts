@@ -39,4 +39,16 @@ export const veiculoService = {
   async excluir(id: number): Promise<void> {
     await api.delete(`/veiculo/${id}`)
   },
+
+  async atualizarKilometragem(veiculoId: number, novaKilometragem: number): Promise<void> {
+    await api.patch('/veiculo/kilometragem', null, {
+      params: { veiculoId, novaKilometragem },
+    })
+  },
+
+  async trocarBase(veiculoId: number, baseId: number): Promise<void> {
+    await api.patch('/veiculo/base', null, {
+      params: { veiculoId, baseId },
+    })
+  },
 }

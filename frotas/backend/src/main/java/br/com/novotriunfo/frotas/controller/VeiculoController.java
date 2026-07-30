@@ -62,4 +62,14 @@ public class VeiculoController {
     public ResponseEntity<Boolean> verificarFrota(@PathVariable String frota) {
         return ResponseEntity.status(HttpStatus.OK).body(veiculoService.verificarFrota(frota));
     }
+    @PatchMapping("/kilometragem")
+    public ResponseEntity<String> atualizarKilometragem(@RequestParam Long veiculoId, @RequestParam Long novaKilometragem) {
+        veiculoService.atualizarKilometragem(veiculoId, novaKilometragem);
+        return ResponseEntity.status(HttpStatus.OK).body("Kilometragem atualizada com sucesso!!!");
+    }
+    @PatchMapping("/base")
+    public ResponseEntity<String> alterarBaseVeiculo(@RequestParam Long veiculoId, @RequestParam Long baseId) {
+        veiculoService.alterarBaseVeiculo(veiculoId, baseId);
+        return ResponseEntity.status(HttpStatus.OK).body("Base do veículo atualizada com sucesso!!!");
+    }
 }

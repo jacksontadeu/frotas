@@ -15,6 +15,7 @@ public class VeiculoDTOResponse {
     private String placaVeiculo;
     private String cor;
     private String anoDeFabricacao;
+    private Long kilometragemAtual;
     private String frota;
     private String tipoVeiculo;
     private BaseDTOResponse base;

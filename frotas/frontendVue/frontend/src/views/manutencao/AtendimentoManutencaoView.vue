@@ -21,6 +21,12 @@ const viewMode = ref<'list' | 'grid'>('list')
 const servicosSelecionados = ref<Servico[]>([])
 const formKilometragem = ref<number | null>(null)
 const formDataRealizacao = ref<string>('')
+// Descrição livre para manutenção corretiva
+const formDescricaoServico = ref<string>('')
+
+// Limite de caracteres da descrição corretiva
+const LIMITE_DESCRICAO = 2000
+const contadorDescricao = computed(() => formDescricaoServico.value.length)
 
 // ── Filtros ───────────────────────────────────────────────────────────────────
 const filtroBusca = ref('')
@@ -88,12 +94,14 @@ function toggleExpand(manutencao: ManutencaoResponse) {
     servicosSelecionados.value = []
     formKilometragem.value = null
     formDataRealizacao.value = ''
+    formDescricaoServico.value = ''
   } else {
     expandedId.value = manutencao.id
     // Inicializa com os dados atuais da manutenção
     servicosSelecionados.value = manutencao.servicos ? [...manutencao.servicos] : []
     formKilometragem.value = manutencao.kilometragem
     formDataRealizacao.value = manutencao.dataRealizacao
+    formDescricaoServico.value = manutencao.descricaoServico ?? ''
   }
   success.value = null
   error.value = null
@@ -113,12 +121,16 @@ function toggleServico(servico: Servico) {
 }
 
 async function finalizarAtendimento(id: number) {
+  const manutencao = manutencoes.value.find((m) => m.id === id)
+  const isCorretiva = manutencao?.tipoManutencao === 'corretiva'
+
   submitting.value = id
   error.value = null
   success.value = null
   try {
     await manutencaoService.atender(id, {
-      servicos: servicosSelecionados.value,
+      servicos: isCorretiva ? [] : servicosSelecionados.value,
+      descricaoServico: isCorretiva ? formDescricaoServico.value : undefined,
       kilometragem: formKilometragem.value,
       dataRealizacao: formDataRealizacao.value,
     })
@@ -286,9 +298,9 @@ onMounted(carregarManutencoes)
               </p>
             </div>
           </div>
-          
+
           <div class="manutencao-status-info">
-            <span class="badge" :class="m.tipoManutencao === 'corretiva' ? 'badge-danger' : 'badge-purple'">
+            <span class="badge" :class="m.tipoManutencao === 'CORRETIVA' ? 'badge-danger' : 'badge-purple'">
               {{ formatarTipo(m.tipoManutencao) }}
             </span>
             <span class="header-km">📍 {{ m.kilometragem }} Km</span>
@@ -328,30 +340,56 @@ onMounted(carregarManutencoes)
               </div>
             </div>
 
-            <h5 class="checklist-title">📋 Checklist de Serviços Realizados</h5>
-            <p class="checklist-subtitle">Selecione as manutenções efetuadas no veículo:</p>
-
-            <div class="checklist-grid">
-              <label
-                v-for="s in SERVICOS_LIST"
-                :key="s.value"
-                class="checklist-item-tile"
-                :class="{ checked: isServicoSelecionado(s.value) }"
-              >
-                <input
-                  type="checkbox"
-                  :checked="isServicoSelecionado(s.value)"
-                  @change="toggleServico(s.value)"
-                />
-                <div class="tile-content">
-                  <span class="tile-icon">{{ s.icon }}</span>
-                  <div class="tile-text">
-                    <span class="tile-label">{{ s.label }}</span>
-                    <span class="tile-desc">{{ s.description }}</span>
-                  </div>
+            <!-- Corretiva: campo de descrição livre -->
+            <template v-if="m.tipoManutencao === 'CORRETIVA'">
+              <h5 class="checklist-title">🔧 Descrição do Serviço Realizado</h5>
+              <p class="checklist-subtitle">Descreva detalhadamente o serviço corretivo executado no veículo:</p>
+              <div class="descricao-corretiva-wrap">
+                <textarea
+                  v-model="formDescricaoServico"
+                  class="form-control descricao-corretiva"
+                  placeholder="Ex: Substituição do alternador, troca da correia dentada, ajuste do sistema de freios..."
+                  rows="5"
+                  :maxlength="LIMITE_DESCRICAO"
+                ></textarea>
+                <div class="descricao-footer">
+                  <span class="descricao-hint">💡 Seja específico sobre as peças trocadas e procedimentos realizados.</span>
+                  <span
+                    class="descricao-contador"
+                    :class="{ 'contador-limite': contadorDescricao >= LIMITE_DESCRICAO }"
+                  >
+                    {{ contadorDescricao }} / {{ LIMITE_DESCRICAO }}
+                  </span>
                 </div>
-              </label>
-            </div>
+              </div>
+            </template>
+
+            <!-- Preventiva / Inspeção: checklist de serviços -->
+            <template v-else>
+              <h5 class="checklist-title">📋 Checklist de Serviços Realizados</h5>
+              <p class="checklist-subtitle">Selecione as manutenções efetuadas no veículo:</p>
+              <div class="checklist-grid">
+                <label
+                  v-for="s in SERVICOS_LIST"
+                  :key="s.value"
+                  class="checklist-item-tile"
+                  :class="{ checked: isServicoSelecionado(s.value) }"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="isServicoSelecionado(s.value)"
+                    @change="toggleServico(s.value)"
+                  />
+                  <div class="tile-content">
+                    <span class="tile-icon">{{ s.icon }}</span>
+                    <div class="tile-text">
+                      <span class="tile-label">{{ s.label }}</span>
+                      <span class="tile-desc">{{ s.description }}</span>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </template>
 
             <!-- Submit Actions -->
             <div class="atendimento-actions">
@@ -734,6 +772,65 @@ onMounted(carregarManutencoes)
   color: var(--accent-1);
 }
 
+/* Corretiva: textarea de descrição */
+.descricao-corretiva-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+
+.descricao-corretiva {
+  width: 100%;
+  resize: vertical;
+  min-height: 120px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 0.85rem 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.descricao-corretiva:focus {
+  outline: none;
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.descricao-corretiva::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.descricao-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.descricao-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.descricao-contador {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.descricao-contador.contador-limite {
+  color: var(--color-danger);
+  font-weight: 700;
+}
+
 /* Actions */
 .atendimento-actions {
   display: flex;
@@ -781,21 +878,21 @@ onMounted(carregarManutencoes)
     align-items: flex-start;
     gap: 0.75rem;
   }
-  
+
   .manutencao-status-info {
     width: 100%;
     justify-content: space-between;
     font-size: 0.85rem;
   }
-  
+
   .checklist-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .atendimento-actions {
     flex-direction: column-reverse;
   }
-  
+
   .atendimento-actions .btn {
     width: 100%;
     justify-content: center;
@@ -814,6 +911,12 @@ onMounted(carregarManutencoes)
 
   .limpar-btn {
     width: 100%;
+  }
+
+  .descricao-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
   }
 }
 </style>
