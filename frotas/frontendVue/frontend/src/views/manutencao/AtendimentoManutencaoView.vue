@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { manutencaoService } from '../../services/manutencaoService'
 import { extractErrorMessage } from '../../composables/useErrorMessage'
 import type { ManutencaoResponse, Servico } from '../../types'
@@ -21,6 +21,54 @@ const viewMode = ref<'list' | 'grid'>('list')
 const servicosSelecionados = ref<Servico[]>([])
 const formKilometragem = ref<number | null>(null)
 const formDataRealizacao = ref<string>('')
+
+// ── Filtros ───────────────────────────────────────────────────────────────────
+const filtroBusca = ref('')
+const filtroDataDe = ref('')
+const filtroDataAte = ref('')
+const filtroBase = ref('')
+
+const basesDisponiveis = computed(() => {
+  const nomes = new Set(manutencoes.value.map((m) => m.veiculo?.base?.nome || 'Sem base definida'))
+  return Array.from(nomes).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+})
+
+const temFiltroAtivo = computed(
+  () =>
+    !!filtroBusca.value ||
+    !!filtroDataDe.value ||
+    !!filtroDataAte.value ||
+    !!filtroBase.value
+)
+
+function limparFiltros() {
+  filtroBusca.value = ''
+  filtroDataDe.value = ''
+  filtroDataAte.value = ''
+  filtroBase.value = ''
+}
+
+// ── Manutenções filtradas ─────────────────────────────────────────────────────
+const manutencoesFiltradas = computed(() => {
+  return manutencoes.value.filter((m) => {
+    if (filtroBusca.value.trim()) {
+      const q = filtroBusca.value.trim().toLowerCase()
+      const placa = m.veiculo?.placaVeiculo?.toLowerCase() ?? ''
+      if (!placa.includes(q)) return false
+    }
+    if (filtroDataDe.value) {
+      if (!m.dataAgendamento || m.dataAgendamento < filtroDataDe.value) return false
+    }
+    if (filtroDataAte.value) {
+      if (!m.dataAgendamento || m.dataAgendamento > filtroDataAte.value) return false
+    }
+    if (filtroBase.value) {
+      const nomeBase = m.veiculo?.base?.nome || 'Sem base definida'
+      if (nomeBase !== filtroBase.value) return false
+    }
+    return true
+  })
+})
 
 async function carregarManutencoes() {
   try {
@@ -116,8 +164,10 @@ onMounted(carregarManutencoes)
   <div class="page-content">
     <div class="page-header-row">
       <div class="page-header">
-        <h1 class="page-title">🔧 Atendimento de Manutenções</h1>
-        <p class="page-subtitle">Selecione uma manutenção em aberto para realizar o checklist e finalizá-la.</p>
+        <h1 class="page-title">🔧 Finalizar Manutenções</h1>
+        <p class="page-subtitle">
+          {{ manutencoesFiltradas.length }} de {{ manutencoes.length }} manutenção(ões) em aberto
+        </p>
       </div>
 
       <!-- Alternador de Visualização (Lista x Cards) -->
@@ -143,6 +193,44 @@ onMounted(carregarManutencoes)
       </div>
     </div>
 
+    <!-- Barra de Filtros -->
+    <div v-if="!loading && !error && manutencoes.length > 0" class="filtros-bar">
+      <div class="busca-wrap">
+        <span class="busca-icon">🔍</span>
+        <input
+          v-model="filtroBusca"
+          type="text"
+          class="form-control"
+          placeholder="Buscar por placa..."
+        />
+        <button v-if="filtroBusca" class="busca-clear" @click="filtroBusca = ''" title="Limpar">✖</button>
+      </div>
+
+      <div class="data-wrap">
+        <label class="filtro-label" for="filtroDataDe">Agendado de</label>
+        <input id="filtroDataDe" v-model="filtroDataDe" type="date" class="form-control" />
+      </div>
+
+      <div class="data-wrap">
+        <label class="filtro-label" for="filtroDataAte">até</label>
+        <input id="filtroDataAte" v-model="filtroDataAte" type="date" class="form-control" />
+      </div>
+
+      <div class="ordenacao-wrap">
+        <label class="filtro-label" for="filtroBase">Base</label>
+        <select id="filtroBase" v-model="filtroBase" class="form-control">
+          <option value="">Todas as bases</option>
+          <option v-for="base in basesDisponiveis" :key="base" :value="base">
+            {{ base }}
+          </option>
+        </select>
+      </div>
+
+      <button v-if="temFiltroAtivo" class="btn btn-secondary btn-sm limpar-btn" @click="limparFiltros">
+        ✖ Limpar filtros
+      </button>
+    </div>
+
     <!-- Alert Success -->
     <div v-if="success" class="alert alert-success" style="margin-bottom: 1.5rem; text-align: center;">
       🎉 {{ success }}
@@ -159,7 +247,7 @@ onMounted(carregarManutencoes)
       <p>Carregando manutenções em aberto...</p>
     </div>
 
-    <!-- Empty State -->
+    <!-- Empty State: nenhuma manutenção -->
     <div v-else-if="manutencoes.length === 0" class="empty-state glass-card">
       <span class="empty-state-icon">✅</span>
       <h3>Nenhuma manutenção em aberto</h3>
@@ -169,10 +257,17 @@ onMounted(carregarManutencoes)
       </button>
     </div>
 
+    <!-- Empty State: filtro sem resultado -->
+    <div v-else-if="manutencoesFiltradas.length === 0" class="empty-state glass-card">
+      <span class="empty-state-icon">🔍</span>
+      <p>Nenhuma manutenção encontrada com os filtros aplicados.</p>
+      <button class="btn btn-secondary" @click="limparFiltros">Limpar filtros</button>
+    </div>
+
     <!-- List / Grid of Open Maintenances -->
     <div v-else :class="['atendimento-container', viewMode === 'grid' ? 'grid-mode' : 'list-mode']">
       <div
-        v-for="m in manutencoes"
+        v-for="m in manutencoesFiltradas"
         :key="m.id"
         class="atendimento-card glass-card"
         :class="{ active: expandedId === m.id, 'is-grid': viewMode === 'grid' }"
@@ -183,6 +278,7 @@ onMounted(carregarManutencoes)
             <span class="veiculo-icon">{{ tipoIcon[m.veiculo.tipoVeiculo] ?? '🚙' }}</span>
             <div class="veiculo-details">
               <h4>{{ m.veiculo.nome }}</h4>
+              <p class="numero-manutencao">Nº {{ m.numeroManutencao }}</p>
               <p class="veiculo-meta">
                 <span>Placa: <strong>{{ m.veiculo.placaVeiculo }}</strong></span>
                 <span class="meta-dot">•</span>
@@ -285,6 +381,76 @@ onMounted(carregarManutencoes)
 </template>
 
 <style scoped>
+/* ── Filtros ── */
+.filtros-bar {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.busca-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+}
+
+.busca-icon {
+  position: absolute;
+  left: 0.75rem;
+  font-size: 0.9rem;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.busca-wrap .form-control {
+  padding-left: 2.25rem;
+  padding-right: 2.25rem;
+}
+
+.busca-clear {
+  position: absolute;
+  right: 0.65rem;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.2rem;
+}
+.busca-clear:hover { color: var(--text-primary); }
+
+.data-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 155px;
+}
+
+.ordenacao-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 175px;
+}
+
+.filtro-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.limpar-btn {
+  align-self: flex-end;
+  white-space: nowrap;
+}
+
+/* ── Header row ── */
 .page-header-row {
   display: flex;
   justify-content: space-between;
@@ -412,6 +578,14 @@ onMounted(carregarManutencoes)
   font-size: 1.15rem;
   font-weight: 700;
   margin-bottom: 0.2rem;
+}
+
+.numero-manutencao {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent-1);
+  margin-bottom: 0.25rem;
+  letter-spacing: 0.02em;
 }
 
 .veiculo-meta {
@@ -625,6 +799,21 @@ onMounted(carregarManutencoes)
   .atendimento-actions .btn {
     width: 100%;
     justify-content: center;
+  }
+
+  .filtros-bar {
+    flex-direction: column;
+  }
+
+  .busca-wrap,
+  .data-wrap,
+  .ordenacao-wrap {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .limpar-btn {
+    width: 100%;
   }
 }
 </style>

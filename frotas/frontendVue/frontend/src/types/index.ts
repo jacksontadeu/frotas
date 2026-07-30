@@ -37,7 +37,7 @@ export interface VeiculoDTORequest {
   frota: string
   base_id: number | null
   tipoVeiculo: TipoVeiculo
-  cor: Cor
+  cor: string
   anoDeFabricacao: number | null
 }
 
@@ -64,7 +64,7 @@ export interface BaseResponse {
 export interface VeiculoResponse {
   id: number
   nome: string
-  cor: Cor
+  cor: string
   placaVeiculo: string
   anoDeFabricacao: string
   frota: string
@@ -81,6 +81,8 @@ export interface AtendimentoDTORequest {
 export interface ManutencaoResponse {
   id: number
   dataAgendamento: string
+  numeroManutencao: string
+  dataRealizacao: string | null
   dataProximaManutencao: string | null
   kilometragem: number
   tipoManutencao: TipoManutencao

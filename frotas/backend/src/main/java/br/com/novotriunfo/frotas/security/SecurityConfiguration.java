@@ -16,7 +16,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -32,18 +31,14 @@ public class SecurityConfiguration {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
-                        // Login liberado
+                        // Preflight e login públicos
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/login").permitAll()
 
-                        // Usuários: GET liberado; POST, PUT e DELETE exigem ROLE_ADMIN
-                        .requestMatchers(HttpMethod.GET, "/usuario", "/usuario/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/usuario").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/usuario/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/usuario/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-
-                        // Swagger liberado
+                        // Swagger
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
@@ -51,25 +46,28 @@ public class SecurityConfiguration {
                                 "/webjars/**"
                         ).permitAll()
 
-                        // Rotas de atendimento e manutenção (acessíveis por TÉCNICO e ADMIN)
-                        .requestMatchers("/atendimento/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMIN", "TECNICO", "ADMIN")
-                        .requestMatchers("/manutencao", "/manutencao/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMIN", "TECNICO", "ADMIN")
-
-                        // Rotas protegidas por ROLE_ADMIN
-                        .requestMatchers("/veiculo", "/veiculo/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-                        .requestMatchers("/base", "/base/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-                        .requestMatchers("/cadastros/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-
-                        // Vue liberado
+                        // Recursos estáticos do Vue
                         .requestMatchers(
-                                "/",
-                                "/index.html",
-                                "/favicon.ico",
-                                "/css/**",
-                                "/js/**",
-                                "/assets/**",
-                                "/images/**"
+                                "/", "/index.html", "/favicon.ico",
+                                "/css/**", "/js/**", "/assets/**", "/images/**"
                         ).permitAll()
+
+                        // Usuários
+                        .requestMatchers(HttpMethod.GET, "/usuario", "/usuario/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/usuario").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/usuario/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/usuario/**").hasAuthority("ROLE_ADMIN")
+
+                        // Manutenção — ADMIN e TECNICO
+                        .requestMatchers("/manutencao", "/manutencao/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_TECNICO")
+
+                        // Atendimento — somente ADMIN
+                        .requestMatchers("/atendimento", "/atendimento/**").hasAuthority("ROLE_ADMIN")
+
+                        // Demais rotas protegidas — somente ADMIN
+                        .requestMatchers("/veiculo", "/veiculo/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/base", "/base/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/cadastros/**").hasAuthority("ROLE_ADMIN")
 
                         // Qualquer outra requisição precisa estar autenticada
                         .anyRequest().authenticated()
@@ -88,6 +86,19 @@ public class SecurityConfiguration {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(java.util.List.of("*"));
+        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(java.util.List.of("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
 }

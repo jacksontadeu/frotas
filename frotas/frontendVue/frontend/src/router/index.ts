@@ -56,7 +56,7 @@ const router = createRouter({
       path: '/atendimento',
       name: 'atendimento-manutencao',
       component: () => import('../views/manutencao/AtendimentoManutencaoView.vue'),
-      meta: { requiresAuth: true, roles: ['ROLE_TECNICO', 'ROLE_ADMIN'] },
+      meta: { requiresAuth: true, roles: ['ROLE_ADMIN'] },
     },
     {
       path: '/listagem/listar-usuarios',
@@ -79,7 +79,7 @@ const router = createRouter({
 
 // Guarda global de rotas
 router.beforeEach((to, _from, next) => {
-  const { isAuthenticated, isTecnico, user, initAuth } = useAuth()
+  const { isAuthenticated, user, initAuth } = useAuth()
 
   // Garante que o usuário seja restaurado do token em qualquer navegação
   if (sessionStorage.getItem('token') && (!isAuthenticated.value || !user.value)) {
@@ -92,11 +92,7 @@ router.beforeEach((to, _from, next) => {
   }
   // Se o usuário está logado mas tenta ir para a tela de login
   else if (to.meta.guestOnly && isAuthenticated.value) {
-    if (isTecnico.value) {
-      next({ name: 'atendimento-manutencao' })
-    } else {
-      next({ name: 'home' })
-    }
+    next({ name: 'home' })
   }
   // Se está autenticado, verifica permissões de papéis
   else if (to.meta.requiresAuth) {
@@ -105,8 +101,6 @@ router.beforeEach((to, _from, next) => {
 
     if (userRole && allowedRoles.includes(userRole)) {
       next()
-    } else if (isTecnico.value) {
-      next({ name: 'atendimento-manutencao' })
     } else {
       next({ name: 'login' })
     }

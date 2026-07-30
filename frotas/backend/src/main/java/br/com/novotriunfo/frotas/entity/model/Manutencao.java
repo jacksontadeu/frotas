@@ -22,9 +22,13 @@ public class Manutencao {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    private String numeroManutencao;
     private LocalDate dataAgendamento;
 
     private LocalDate dataProximaManutencao;
+
+    private LocalDate dataRealizacao;
 
     private Long kilometragem;
     

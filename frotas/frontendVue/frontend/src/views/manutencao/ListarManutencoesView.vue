@@ -24,9 +24,14 @@ const filtroBusca = ref('')
 const filtroDataDe = ref('')
 const filtroDataAte = ref('')
 
-// ── Ordenação de bases ────────────────────────────────────────────────────────
-type Ordenacao = 'base_asc' | 'base_desc'
-const ordenacao = ref<Ordenacao>('base_asc')
+// ── Filtros de Base e Status ──────────────────────────────────────────────────
+const filtroBase = ref('')
+const filtroStatus = ref<'TODOS' | 'EM_ABERTO' | 'FINALIZADA'>('TODOS')
+
+const basesDisponiveis = computed(() => {
+  const nomes = new Set(manutencoes.value.map((m) => m.veiculo?.base?.nome || 'Sem base definida'))
+  return Array.from(nomes).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+})
 
 async function carregarManutencoes() {
   try {
@@ -44,10 +49,17 @@ function limparFiltros() {
   filtroBusca.value = ''
   filtroDataDe.value = ''
   filtroDataAte.value = ''
+  filtroBase.value = ''
+  filtroStatus.value = 'TODOS'
 }
 
 const temFiltroAtivo = computed(
-  () => !!filtroBusca.value || !!filtroDataDe.value || !!filtroDataAte.value
+  () =>
+    !!filtroBusca.value ||
+    !!filtroDataDe.value ||
+    !!filtroDataAte.value ||
+    !!filtroBase.value ||
+    filtroStatus.value !== 'TODOS'
 )
 
 // ── Manutenções filtradas ─────────────────────────────────────────────────────
@@ -63,6 +75,13 @@ const manutencoesFiltradas = computed(() => {
     }
     if (filtroDataAte.value) {
       if (!m.dataAgendamento || m.dataAgendamento > filtroDataAte.value) return false
+    }
+    if (filtroBase.value) {
+      const nomeBase = m.veiculo?.base?.nome || 'Sem base definida'
+      if (nomeBase !== filtroBase.value) return false
+    }
+    if (filtroStatus.value !== 'TODOS') {
+      if (m.status !== filtroStatus.value) return false
     }
     return true
   })
@@ -80,11 +99,7 @@ const gruposPorBase = computed(() => {
     lista.sort((a, b) => (b.dataAgendamento ?? '').localeCompare(a.dataAgendamento ?? ''))
   }
   const grupos = Array.from(mapa.entries()).map(([base, itens]) => ({ base, itens }))
-  grupos.sort((a, b) =>
-    ordenacao.value === 'base_desc'
-      ? b.base.localeCompare(a.base, 'pt-BR')
-      : a.base.localeCompare(b.base, 'pt-BR')
-  )
+  grupos.sort((a, b) => a.base.localeCompare(b.base, 'pt-BR'))
   return grupos
 })
 
@@ -184,10 +199,21 @@ onMounted(carregarManutencoes)
       </div>
 
       <div class="ordenacao-wrap">
-        <label class="filtro-label" for="ordenacao">Ordenar bases</label>
-        <select id="ordenacao" v-model="ordenacao" class="form-control">
-          <option value="base_asc">Base (A-Z)</option>
-          <option value="base_desc">Base (Z-A)</option>
+        <label class="filtro-label" for="filtroBase">Base</label>
+        <select id="filtroBase" v-model="filtroBase" class="form-control">
+          <option value="">Todas as bases</option>
+          <option v-for="base in basesDisponiveis" :key="base" :value="base">
+            {{ base }}
+          </option>
+        </select>
+      </div>
+
+      <div class="ordenacao-wrap">
+        <label class="filtro-label" for="filtroStatus">Status</label>
+        <select id="filtroStatus" v-model="filtroStatus" class="form-control">
+          <option value="TODOS">Todos</option>
+          <option value="EM_ABERTO">Em Aberto</option>
+          <option value="FINALIZADA">Finalizada</option>
         </select>
       </div>
 
@@ -247,6 +273,7 @@ onMounted(carregarManutencoes)
               <span class="card-veiculo-icon">{{ tipoIcon[m.veiculo.tipoVeiculo] ?? '🚙' }}</span>
               <div class="card-top-text">
                 <h3 class="card-nome">{{ m.veiculo.nome }}</h3>
+                <span class="numero-manutencao">Nº {{ m.numeroManutencao }}</span>
                 <span class="placa-badge">{{ m.veiculo.placaVeiculo }}</span>
               </div>
               <span
@@ -279,6 +306,13 @@ onMounted(carregarManutencoes)
                 <div class="info-text">
                   <span class="info-label">Agendado</span>
                   <span class="info-value">{{ formatarData(m.dataAgendamento) }}</span>
+                </div>
+              </div>
+              <div class="info-row" v-if="m.dataRealizacao">
+                <span class="info-icon">✅</span>
+                <div class="info-text">
+                  <span class="info-label">Realizado</span>
+                  <span class="info-value">{{ formatarData(m.dataRealizacao) }}</span>
                 </div>
               </div>
               <div class="info-row" v-if="m.dataProximaManutencao">
@@ -328,6 +362,7 @@ onMounted(carregarManutencoes)
                 <div>
                   <h5 class="manutencao-veiculo-nome">
                     {{ m.veiculo.nome }}
+                    <span class="numero-manutencao">Nº {{ m.numeroManutencao }}</span>
                     <span class="placa-badge">{{ m.veiculo.placaVeiculo }}</span>
                   </h5>
                 </div>
@@ -339,6 +374,9 @@ onMounted(carregarManutencoes)
                 </span>
                 <span class="info-meta">📍 {{ m.kilometragem }} km</span>
                 <span class="info-meta">📅 Agendada: {{ formatarData(m.dataAgendamento) }}</span>
+                <span v-if="m.dataRealizacao" class="info-meta">
+                  ✅ Realizada: {{ formatarData(m.dataRealizacao) }}
+                </span>
                 <span v-if="m.dataProximaManutencao" class="info-meta info-meta-success">
                   📅 Próxima: {{ formatarData(m.dataProximaManutencao) }}
                 </span>
@@ -584,6 +622,13 @@ onMounted(carregarManutencoes)
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.numero-manutencao {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent-1);
+  letter-spacing: 0.02em;
 }
 
 .placa-badge {

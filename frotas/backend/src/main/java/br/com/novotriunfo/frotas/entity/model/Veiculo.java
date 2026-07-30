@@ -24,10 +24,12 @@ public class Veiculo {
     private String frota;
     private String placaVeiculo;
     private String cor;
-    private Year anoDeFabricacao;
+    private Year anoDeFabricacao ;
 
     private Boolean ativo = true;
     private String motivoInativacao;
+
+    private Long  kilometragemAtual = 0L;
 
     @Enumerated(EnumType.STRING)
     private TipoVeiculo tipoVeiculo;

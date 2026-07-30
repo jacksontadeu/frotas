@@ -19,6 +19,10 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      '/atendimento': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
       '/usuario': {
         target: 'http://localhost:8080',
         changeOrigin: true,

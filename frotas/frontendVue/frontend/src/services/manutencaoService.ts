@@ -12,13 +12,13 @@ export const manutencaoService = {
   },
 
   async listarAbertas(): Promise<ManutencaoResponse[]> {
-    const response = await api.get<ManutencaoResponse[]>('/manutencao', {
+    const response = await api.get<ManutencaoResponse[]>('/manutencao/status', {
       params: { status: 'EM_ABERTO' },
     })
     return response.data
   },
 
   async atender(id: number, data: AtendimentoDTORequest): Promise<void> {
-    await api.put(`/manutencao/${id}/atendimento`, data)
+    await api.patch(`/atendimento/${id}`, data)
   },
 }

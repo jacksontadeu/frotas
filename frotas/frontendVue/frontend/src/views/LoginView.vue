@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 
 const router = useRouter()
-const { login, errorMsg, isLoading, isTecnico } = useAuth()
+const { login, errorMsg, isLoading } = useAuth()
 
 const email = ref('')
 const senha = ref('')
@@ -19,11 +19,7 @@ async function handleSubmit() {
   })
 
   if (success) {
-    if (isTecnico.value) {
-      router.push('/atendimento')
-    } else {
-      router.push('/')
-    }
+    router.push('/')
   }
 }
 </script>

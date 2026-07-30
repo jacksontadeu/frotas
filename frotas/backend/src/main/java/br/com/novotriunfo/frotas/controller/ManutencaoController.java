@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Optional;
 @CrossOrigin(origins = "*")
 @RestController
-@RequestMapping("manutencao")
+@RequestMapping("/manutencao")
 @Tag(name="manutencao")
 public class ManutencaoController {
     private final ModelMapper modelMapper;
@@ -50,5 +50,10 @@ public class ManutencaoController {
     public ResponseEntity<ManutencaoDTOResponse> buscarManutencaoPorId(@PathVariable Long id) {
         ManutencaoDTOResponse response = manutencaoService.buscarPorId(id);
         return ResponseEntity.ok(response);
+    }
+    @GetMapping("/status")
+    public ResponseEntity<List<ManutencaoDTOResponse>> listarManutencoesPorStatus(@RequestParam StatusManutencao status) {
+        List<ManutencaoDTOResponse> responseList = manutencaoService.listarPorStatus(status);
+        return ResponseEntity.ok(responseList);
     }
 }

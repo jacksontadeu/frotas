@@ -43,12 +43,7 @@ public class Usuario implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Garante que sempre tenha prefixo ROLE_
-        String roleName = role.name();
-        if (!roleName.startsWith("ROLE_")) {
-            roleName = "ROLE_" + roleName;
-        }
-        return Set.of(new SimpleGrantedAuthority(roleName));
+        return List.of(new SimpleGrantedAuthority(role.getRole()));
     }
 
     @Override

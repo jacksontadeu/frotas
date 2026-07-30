@@ -56,6 +56,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/cadastros/cadastrar-manutencao', label: 'Cadastrar Manutenção' },
       { to: '/listagem/listar-manutencoes', label: 'Listar Todas as Manutenções' },
+      { to: '/atendimento', label: 'Finalizar Manutenções' },
     ],
   },
   {

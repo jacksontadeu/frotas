@@ -1,5 +1,6 @@
 package br.com.novotriunfo.frotas.service;
 
+import br.com.novotriunfo.frotas.entity.dto.request.AtendimentoDTORequest;
 import br.com.novotriunfo.frotas.entity.dto.request.ManutencaoDTORequest;
 import br.com.novotriunfo.frotas.entity.dto.response.ManutencaoDTOResponse;
 import br.com.novotriunfo.frotas.entity.enums.TipoManutencao;
@@ -37,11 +38,14 @@ public class ManutencaoService {
         manutencao.setVeiculo(veiculo.get());
 
         manutencaoRepository.save(manutencao);
+        String numero = String.format("MAN-%04d", manutencao.getId());
+        manutencao.setNumeroManutencao(numero);
+        manutencaoRepository.save(manutencao);
     }
 
     public ManutencaoDTOResponse buscarPorId(Long id) {
         Optional<Manutencao> manutencao = manutencaoRepository.findById(id);
-        if(manutencao.isEmpty()){
+        if (manutencao.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Manutenção não encontrada");
         }
         ManutencaoDTOResponse response = modelMapper.map(manutencao.get(), ManutencaoDTOResponse.class);
@@ -50,16 +54,22 @@ public class ManutencaoService {
 
     public List<ManutencaoDTOResponse> listarTodas() {
         List<Manutencao> manutencoes = manutencaoRepository.findAll();
-         List<ManutencaoDTOResponse> responses= modelMapper.map(manutencoes,
-                new TypeToken<List<ManutencaoDTOResponse>>(){}.getType());
+        List<ManutencaoDTOResponse> responses = modelMapper.map(manutencoes,
+                new TypeToken<List<ManutencaoDTOResponse>>() {
+                }.getType());
         return responses;
     }
 
     public List<ManutencaoDTOResponse> listarPorStatus(StatusManutencao status) {
-        return manutencaoRepository.findByStatus(status).stream()
-                .map(manutencao -> modelMapper.map(manutencao, ManutencaoDTOResponse.class))
-                .collect(Collectors.toList());
+        List<Manutencao> manutencoes = manutencaoRepository.findByStatus(status);
+        List<ManutencaoDTOResponse> responses = modelMapper.map(manutencoes,
+                new TypeToken<List<ManutencaoDTOResponse>>() {
+                }.getType());
+        return responses;
     }
 
 
 }
+
+
+

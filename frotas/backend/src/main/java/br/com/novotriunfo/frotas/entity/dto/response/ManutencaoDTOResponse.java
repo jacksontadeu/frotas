@@ -16,6 +16,8 @@ import java.util.Set;
 public class ManutencaoDTOResponse {
     private Long id;
     private LocalDate dataAgendamento;
+    private LocalDate dataRealizacao;
+    private String numeroManutencao;
     private Long kilometragem;
     private String tipoManutencao;
     private VeiculoDTOResponse veiculo;
