@@ -40,7 +40,6 @@ public class ManutencaoService {
         manutencao.setTipoManutencao(TipoManutencao.valueOf(String.valueOf(request.getTipoManutencao())));
         Optional<Veiculo> veiculo = veiculoRepository.findById(request.getVeiculo_id());
         manutencao.setVeiculo(veiculo.get());
-
         manutencaoRepository.save(manutencao);
         String numero = String.format("MAN-%04d", manutencao.getId());
         manutencao.setNumeroManutencao(numero);

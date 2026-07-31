@@ -1,123 +1,125 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
-import { veiculoService } from '../../services/veiculoService'
+import { RouterLink } from 'vue-router'
 import { manutencaoService } from '../../services/manutencaoService'
-import { baseService } from '../../services/baseService'
-import type { VeiculoResponse, ManutencaoResponse, BaseResponse } from '../../types'
-import AppModal from '../../components/AppModal.vue'
-import { extractErrorMessage } from '../../composables/useErrorMessage'
+import type { ManutencaoResponse, Servico } from '../../types'
+import { SERVICOS_LIST } from '../../types'
 
-const veiculos = ref<VeiculoResponse[]>([])
+const manutencoes = ref<ManutencaoResponse[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
-const deletingId = ref<number | null>(null)
 
-// Modal
-const showModal = ref(false)
-const modalType = ref<'success' | 'error' | 'confirm'>('confirm')
-const modalMessage = ref('')
-const pendingDeleteId = ref<number | null>(null)
-const pendingDeleteNome = ref('')
+// ── Modal de Detalhes ─────────────────────────────────────────────────────────
+const manutencaoSelecionada = ref<ManutencaoResponse | null>(null)
 
-// ── Manutenções por veículo ──────────────────────────────────────────────────
-const manutencoes = ref<ManutencaoResponse[]>([])
+function abrirDetalhes(manutencao: ManutencaoResponse) {
+  manutencaoSelecionada.value = manutencao
+}
 
-/** Retorna a manutenção mais recente (maior id) de cada veículo */
-const ultimaManutencaoPorVeiculo = computed(() => {
-  const mapa = new Map<number, ManutencaoResponse>()
-  for (const m of manutencoes.value) {
-    if (!m.veiculo?.id) continue
-    const existente = mapa.get(m.veiculo.id)
-    if (!existente || m.id > existente.id) {
-      mapa.set(m.veiculo.id, m)
-    }
-  }
-  return mapa
+function fecharModal() {
+  manutencaoSelecionada.value = null
+}
+
+// ── Função para Imprimir/Gerar PDF Apenas da Modal ───────────────────────────
+function imprimirDetalhes() {
+  document.body.classList.add('printing-modal-active')
+  window.print()
+  document.body.classList.remove('printing-modal-active')
+}
+
+// ── Modo de visualização ──────────────────────────────────────────────────────
+type ViewMode = 'cards' | 'list'
+const viewMode = ref<ViewMode>(
+  (localStorage.getItem('manutencoes-view-mode') as ViewMode) ?? 'cards'
+)
+function setViewMode(mode: ViewMode) {
+  viewMode.value = mode
+  localStorage.setItem('manutencoes-view-mode', mode)
+}
+
+// ── Filtros ──────────────────────────────────────────────────────────────────
+const filtroBusca = ref('')
+const filtroDataDe = ref('')
+const filtroDataAte = ref('')
+
+// ── Filtros de Base e Status ──────────────────────────────────────────────────
+const filtroBase = ref('')
+const filtroStatus = ref<'TODOS' | 'EM_ABERTO' | 'FINALIZADA'>('TODOS')
+
+const basesDisponiveis = computed(() => {
+  const nomes = new Set(manutencoes.value.map((m) => m.veiculo?.base?.nome || 'Sem base definida'))
+  return Array.from(nomes).sort((a, b) => a.localeCompare(b, 'pt-BR'))
 })
 
-function getUltimaManutencao(veiculoId: number): ManutencaoResponse | undefined {
-  return ultimaManutencaoPorVeiculo.value.get(veiculoId)
-}
-
-function formatarKm(km: number | null | undefined): string {
-  if (km == null) return '—'
-  return km.toLocaleString('pt-BR') + ' km'
-}
-
-function formatarData(data: string | null | undefined): string {
-  if (!data) return '—'
-  const [ano, mes, dia] = data.split('T')[0].split('-')
-  return `${dia}/${mes}/${ano}`
-}
-
-type StatusManutencao = 'ok' | 'alerta' | 'vencida' | 'sem-info'
-
-function statusProximaManutencao(data: string | null | undefined): StatusManutencao {
-  if (!data) return 'sem-info'
-  const hoje = new Date()
-  hoje.setHours(0, 0, 0, 0)
-  const proxima = new Date(data + 'T00:00:00')
-  const diffDias = Math.ceil((proxima.getTime() - hoje.getTime()) / 86400000)
-  if (diffDias < 0) return 'vencida'
-  if (diffDias <= 30) return 'alerta'
-  return 'ok'
-}
-
-async function carregarVeiculos() {
+async function carregarManutencoes() {
   try {
     loading.value = true
     error.value = null
-    const [veiculosData, manutencoesData] = await Promise.all([
-      veiculoService.listarTodos(),
-      manutencaoService.listarTodas(),
-    ])
-    veiculos.value = veiculosData
-    manutencoes.value = manutencoesData
+    manutencoes.value = await manutencaoService.listarTodas()
   } catch {
-    error.value = 'Erro ao carregar veículos. Verifique se o servidor está rodando.'
+    error.value = 'Erro ao carregar lista de manutenções. Verifique se o servidor está rodando.'
   } finally {
     loading.value = false
   }
 }
 
-function confirmarExclusao(id: number, nome: string) {
-  pendingDeleteId.value = id
-  pendingDeleteNome.value = nome
-  modalType.value = 'confirm'
-  modalMessage.value = `Tem certeza que deseja excluir o veículo "${nome}"? Esta ação não pode ser desfeita.`
-  showModal.value = true
+function limparFiltros() {
+  filtroBusca.value = ''
+  filtroDataDe.value = ''
+  filtroDataAte.value = ''
+  filtroBase.value = ''
+  filtroStatus.value = 'TODOS'
 }
 
-async function executarExclusao() {
-  showModal.value = false
-  if (!pendingDeleteId.value) return
-  const id = pendingDeleteId.value
-  try {
-    deletingId.value = id
-    await veiculoService.excluir(id)
-    veiculos.value = veiculos.value.filter((v) => v.id !== id)
-    modalType.value = 'success'
-    modalMessage.value = `Veículo "${pendingDeleteNome.value}" excluído com sucesso!`
-    showModal.value = true
-  } catch (e: any) {
-    modalType.value = 'error'
-    modalMessage.value = extractErrorMessage(e, 'Erro ao excluir veículo.')
-    showModal.value = true
-  } finally {
-    deletingId.value = null
-    pendingDeleteId.value = null
+const temFiltroAtivo = computed(
+  () =>
+    !!filtroBusca.value ||
+    !!filtroDataDe.value ||
+    !!filtroDataAte.value ||
+    !!filtroBase.value ||
+    filtroStatus.value !== 'TODOS'
+)
+
+// ── Manutenções filtradas ─────────────────────────────────────────────────────
+const manutencoesFiltradas = computed(() => {
+  return manutencoes.value.filter((m) => {
+    if (filtroBusca.value.trim()) {
+      const q = filtroBusca.value.trim().toLowerCase()
+      const placa = m.veiculo?.placaVeiculo?.toLowerCase() ?? ''
+      if (!placa.includes(q)) return false
+    }
+    if (filtroDataDe.value) {
+      if (!m.dataAgendamento || m.dataAgendamento < filtroDataDe.value) return false
+    }
+    if (filtroDataAte.value) {
+      if (!m.dataAgendamento || m.dataAgendamento > filtroDataAte.value) return false
+    }
+    if (filtroBase.value) {
+      const nomeBase = m.veiculo?.base?.nome || 'Sem base definida'
+      if (nomeBase !== filtroBase.value) return false
+    }
+    if (filtroStatus.value !== 'TODOS') {
+      if (m.status !== filtroStatus.value) return false
+    }
+    return true
+  })
+})
+
+// ── Agrupamento por Base ──────────────────────────────────────────────────────
+const gruposPorBase = computed(() => {
+  const mapa = new Map<string, ManutencaoResponse[]>()
+  for (const m of manutencoesFiltradas.value) {
+    const nomeBase = m.veiculo?.base?.nome || 'Sem base definida'
+    if (!mapa.has(nomeBase)) mapa.set(nomeBase, [])
+    mapa.get(nomeBase)!.push(m)
   }
-}
-
-function fecharModal() {
-  showModal.value = false
-}
-
-const router = useRouter()
-function navegarParaManutencao(veiculoId: number) {
-  router.push({ name: 'cadastrar-manutencao', query: { veiculoId } })
-}
+  for (const lista of mapa.values()) {
+    lista.sort((a, b) => (b.dataAgendamento ?? '').localeCompare(a.dataAgendamento ?? ''))
+  }
+  const grupos = Array.from(mapa.entries()).map(([base, itens]) => ({ base, itens }))
+  grupos.sort((a, b) => a.base.localeCompare(b.base, 'pt-BR'))
+  return grupos
+})
 
 const tipoIcon: Record<string, string> = {
   CARRO: '🚗',
@@ -125,179 +127,34 @@ const tipoIcon: Record<string, string> = {
   VAN: '🚐',
 }
 
-// ── Modal Trocar Base ────────────────────────────────────────────────────────
-const showModalBase = ref(false)
-const basesDisponiveis = ref<BaseResponse[]>([])
-const baseSelecionadaId = ref<number | null>(null)
-const veiculoAlvoBase = ref<VeiculoResponse | null>(null)
-const salvandoBase = ref(false)
-
-async function abrirModalBase(veiculo: VeiculoResponse) {
-  veiculoAlvoBase.value = veiculo
-  baseSelecionadaId.value = veiculo.base?.id ?? null
-  basesDisponiveis.value = await baseService.listarTodas()
-  showModalBase.value = true
+const formatarData = (dataStr?: string) => {
+  if (!dataStr) return ''
+  const [ano, mes, dia] = dataStr.split('-')
+  return `${dia}/${mes}/${ano}`
 }
 
-async function confirmarTrocaBase() {
-  if (!veiculoAlvoBase.value || !baseSelecionadaId.value) return
-  try {
-    salvandoBase.value = true
-    await veiculoService.trocarBase(veiculoAlvoBase.value.id, baseSelecionadaId.value)
-    // Atualiza localmente
-    const baseNova = basesDisponiveis.value.find((b) => b.id === baseSelecionadaId.value)!
-    const idx = veiculos.value.findIndex((v) => v.id === veiculoAlvoBase.value!.id)
-    if (idx !== -1) veiculos.value[idx] = { ...veiculos.value[idx], base: baseNova }
-    showModalBase.value = false
-    modalType.value = 'success'
-    modalMessage.value = `Base do veículo "${veiculoAlvoBase.value.nome}" alterada para "${baseNova.nome}" com sucesso!`
-    showModal.value = true
-  } catch (e: any) {
-    showModalBase.value = false
-    modalType.value = 'error'
-    modalMessage.value = extractErrorMessage(e, 'Erro ao trocar a base do veículo.')
-    showModal.value = true
-  } finally {
-    salvandoBase.value = false
+const formatarTipo = (tipo: string) => {
+  const map: Record<string, string> = {
+    PREVENTIVA_TROCA_DE_OLEO: 'Prev. - Troca de Óleo',
+    PREVENTIVA_KIT_CORREIA_DENTADA: 'Prev. - Kit Correia',
+    CORRETIVA: 'Corretiva',
   }
+  return map[tipo] || tipo
 }
 
-// ── Modal Atualizar Kilometragem ─────────────────────────────────────────────
-const showModalKm = ref(false)
-const novaKm = ref<number | null>(null)
-const kmMinima = ref(0)
-const veiculoAlvoKm = ref<VeiculoResponse | null>(null)
-const salvandoKm = ref(false)
-const erroKm = ref<string | null>(null)
+const getServicoInfo = (servico: Servico) => SERVICOS_LIST.find((s) => s.value === servico)
 
-function abrirModalKm(veiculo: VeiculoResponse) {
-  veiculoAlvoKm.value = veiculo
-  kmMinima.value = veiculo.kilometragemAtual ?? 0
-  novaKm.value = null
-  erroKm.value = null
-  showModalKm.value = true
-}
-
-async function confirmarAtualizacaoKm() {
-  if (!veiculoAlvoKm.value || novaKm.value == null) return
-  if (novaKm.value < kmMinima.value) {
-    erroKm.value = `A kilometragem não pode ser menor que a atual (${kmMinima.value.toLocaleString('pt-BR')} km).`
-    return
-  }
-  try {
-    salvandoKm.value = true
-    erroKm.value = null
-    await veiculoService.atualizarKilometragem(veiculoAlvoKm.value.id, novaKm.value)
-    // Atualiza localmente
-    const idx = veiculos.value.findIndex((v) => v.id === veiculoAlvoKm.value!.id)
-    if (idx !== -1) veiculos.value[idx] = { ...veiculos.value[idx], kilometragemAtual: novaKm.value }
-    showModalKm.value = false
-    modalType.value = 'success'
-    modalMessage.value = `Kilometragem do veículo "${veiculoAlvoKm.value.nome}" atualizada para ${novaKm.value.toLocaleString('pt-BR')} km!`
-    showModal.value = true
-  } catch (e: any) {
-    erroKm.value = extractErrorMessage(e, 'Erro ao atualizar a kilometragem.')
-  } finally {
-    salvandoKm.value = false
-  }
-}
-
-// ── Modal Detalhes do Veículo ────────────────────────────────────────────────
-const veiculoDetalhes = ref<VeiculoResponse | null>(null)
-
-function abrirDetalhes(veiculo: VeiculoResponse) {
-  veiculoDetalhes.value = veiculo
-}
-
-function fecharDetalhes() {
-  veiculoDetalhes.value = null
-}
-
-function irParaManutencaoPeloModal() {
-  if (!veiculoDetalhes.value) return
-  const id = veiculoDetalhes.value.id
-  fecharDetalhes()
-  navegarParaManutencao(id)
-}
-
-function abrirKmPeloModal() {
-  if (!veiculoDetalhes.value) return
-  const veiculo = veiculoDetalhes.value
-  fecharDetalhes()
-  abrirModalKm(veiculo)
-}
-
-function abrirBasePeloModal() {
-  if (!veiculoDetalhes.value) return
-  const veiculo = veiculoDetalhes.value
-  fecharDetalhes()
-  abrirModalBase(veiculo)
-}
-
-const manutencoesDoVeiculo = computed(() => {
-  if (!veiculoDetalhes.value) return []
-  return manutencoes.value
-    .filter((m) => m.veiculo?.id === veiculoDetalhes.value!.id)
-    .sort((a, b) => b.id - a.id)
-})
-
-// ── Modo de visualização (persistido) ───────────────────────────────────────
-type ViewMode = 'cards' | 'list'
-const viewMode = ref<ViewMode>(
-  (localStorage.getItem('veiculos-view-mode') as ViewMode) ?? 'cards'
-)
-function setViewMode(mode: ViewMode) {
-  viewMode.value = mode
-  localStorage.setItem('veiculos-view-mode', mode)
-}
-
-// ── Busca (placa / frota) ────────────────────────────────────────────────────
-const buscaQuery = ref('')
-
-// ── Ordenação dos grupos de base ────────────────────────────────────────────
-type Ordenacao = 'base_asc' | 'base_desc'
-const ordenacao = ref<Ordenacao>('base_asc')
-
-const veiculosFiltrados = computed(() => {
-  if (!buscaQuery.value.trim()) return veiculos.value
-  const q = buscaQuery.value.trim().toLowerCase()
-  return veiculos.value.filter(
-    (v) =>
-      v.placaVeiculo?.toLowerCase().includes(q) ||
-      v.frota?.toLowerCase().includes(q)
-  )
-})
-
-// ── Veículos agrupados por base ──────────────────────────────────────────────
-const gruposPorBase = computed(() => {
-  const mapa = new Map<string, VeiculoResponse[]>()
-  for (const v of veiculosFiltrados.value) {
-    const nomeBase = v.base?.nome || 'Sem base definida'
-    if (!mapa.has(nomeBase)) mapa.set(nomeBase, [])
-    mapa.get(nomeBase)!.push(v)
-  }
-  for (const lista of mapa.values()) {
-    lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
-  }
-  const grupos = Array.from(mapa.entries()).map(([base, itens]) => ({ base, itens }))
-  grupos.sort((a, b) =>
-    ordenacao.value === 'base_desc'
-      ? b.base.localeCompare(a.base, 'pt-BR')
-      : a.base.localeCompare(b.base, 'pt-BR')
-  )
-  return grupos
-})
-
-onMounted(carregarVeiculos)
+onMounted(carregarManutencoes)
 </script>
 
 <template>
   <div class="page-content">
+    <!-- Cabeçalho -->
     <div class="page-header-row">
       <div>
-        <h1 class="page-title">🚛 Veículos</h1>
+        <h1 class="page-title">🔧 Manutenções</h1>
         <p class="page-subtitle">
-          {{ veiculosFiltrados.length }} de {{ veiculos.length }} veículo(s)
+          {{ manutencoesFiltradas.length }} de {{ manutencoes.length }} manutenção(ões)
         </p>
       </div>
       <div class="header-actions">
@@ -329,451 +186,341 @@ onMounted(carregarVeiculos)
             Lista
           </button>
         </div>
-        <RouterLink to="/cadastros/cadastrar-veiculo" class="btn btn-primary">
-          + Novo Veículo
+
+        <RouterLink to="/cadastros/cadastrar-manutencao" class="btn btn-primary">
+          + Registrar Manutenção
         </RouterLink>
       </div>
     </div>
 
-    <!-- Filtros: busca por placa/frota + ordenação por base -->
-    <div v-if="!loading && !error && veiculos.length > 0" class="filtros-bar">
+    <!-- Barra de Filtros -->
+    <div v-if="!loading && !error && manutencoes.length > 0" class="filtros-bar">
       <div class="busca-wrap">
         <span class="busca-icon">🔍</span>
         <input
-          v-model="buscaQuery"
+          v-model="filtroBusca"
           type="text"
           class="form-control"
-          placeholder="Buscar por placa ou frota..."
+          placeholder="Buscar por placa..."
         />
-        <button
-          v-if="buscaQuery"
-          class="busca-clear"
-          @click="buscaQuery = ''"
-          title="Limpar busca"
-        >✖</button>
+        <button v-if="filtroBusca" class="busca-clear" @click="filtroBusca = ''" title="Limpar">✖</button>
+      </div>
+
+      <div class="data-wrap">
+        <label class="filtro-label" for="filtroDataDe">Agendado de</label>
+        <input id="filtroDataDe" v-model="filtroDataDe" type="date" class="form-control" />
+      </div>
+
+      <div class="data-wrap">
+        <label class="filtro-label" for="filtroDataAte">até</label>
+        <input id="filtroDataAte" v-model="filtroDataAte" type="date" class="form-control" />
       </div>
 
       <div class="ordenacao-wrap">
-        <label class="ordenacao-label" for="ordenacao">Ordenar bases</label>
-        <select id="ordenacao" v-model="ordenacao" class="form-control">
-          <option value="base_asc">Base (A-Z)</option>
-          <option value="base_desc">Base (Z-A)</option>
+        <label class="filtro-label" for="filtroBase">Base</label>
+        <select id="filtroBase" v-model="filtroBase" class="form-control">
+          <option value="">Todas as bases</option>
+          <option v-for="base in basesDisponiveis" :key="base" :value="base">
+            {{ base }}
+          </option>
         </select>
       </div>
+
+      <div class="ordenacao-wrap">
+        <label class="filtro-label" for="filtroStatus">Status</label>
+        <select id="filtroStatus" v-model="filtroStatus" class="form-control">
+          <option value="TODOS">Todos</option>
+          <option value="EM_ABERTO">Em Aberto</option>
+          <option value="FINALIZADA">Finalizada</option>
+        </select>
+      </div>
+
+      <button v-if="temFiltroAtivo" class="btn btn-secondary btn-sm limpar-btn" @click="limparFiltros">
+        ✖ Limpar filtros
+      </button>
     </div>
 
     <!-- Loading -->
     <div v-if="loading" class="loading-container">
       <div class="spinner"></div>
-      <p>Carregando veículos...</p>
+      <p>Carregando manutenções...</p>
     </div>
 
     <!-- Error -->
     <div v-else-if="error" class="alert alert-danger">⚠️ {{ error }}</div>
 
-    <!-- Empty (sem veículos cadastrados) -->
-    <div v-else-if="veiculos.length === 0" class="empty-state">
-      <span class="empty-state-icon">🚗</span>
-      <p>Nenhum veículo cadastrado ainda.</p>
-      <RouterLink to="/cadastros/cadastrar-veiculo" class="btn btn-primary">
-        Cadastrar primeiro veículo
+    <!-- Empty: sem manutenções -->
+    <div v-else-if="manutencoes.length === 0" class="empty-state">
+      <span class="empty-state-icon">🔧</span>
+      <p>Nenhuma manutenção registrada ainda.</p>
+      <RouterLink to="/cadastros/cadastrar-manutencao" class="btn btn-primary">
+        Registrar primeira manutenção
       </RouterLink>
     </div>
 
-    <!-- Empty (busca sem resultado) -->
-    <div v-else-if="veiculosFiltrados.length === 0" class="empty-state">
+    <!-- Empty: filtro sem resultado -->
+    <div v-else-if="manutencoesFiltradas.length === 0" class="empty-state">
       <span class="empty-state-icon">🔍</span>
-      <p>Nenhum veículo encontrado para "{{ buscaQuery }}".</p>
-      <button class="btn btn-secondary" @click="buscaQuery = ''">Limpar busca</button>
+      <p>Nenhuma manutenção encontrada com os filtros aplicados.</p>
+      <button class="btn btn-secondary" @click="limparFiltros">Limpar filtros</button>
     </div>
 
-    <!-- ── GRID DE CARDS (agrupado por base) ── -->
-    <div v-else-if="viewMode === 'cards'" class="grupos-wrap">
+    <!-- ── GRUPOS POR BASE ── -->
+    <div v-else class="grupos-wrap">
       <section v-for="grupo in gruposPorBase" :key="grupo.base" class="grupo-base">
+
+        <!-- Cabeçalho do grupo -->
         <div class="grupo-base-header">
           <span class="grupo-base-icon">🏢</span>
           <h2 class="grupo-base-nome">{{ grupo.base }}</h2>
-          <span class="grupo-base-count">{{ grupo.itens.length }} veículo(s)</span>
+          <span class="grupo-base-count">{{ grupo.itens.length }} manutenção(ões)</span>
         </div>
 
-        <div class="veiculos-grid">
+        <!-- ── CARDS ── -->
+        <div v-if="viewMode === 'cards'" class="manutencoes-grid">
           <div
-            v-for="veiculo in grupo.itens"
-            :key="veiculo.id"
-            class="veiculo-card clickable"
-            @click="abrirDetalhes(veiculo)"
+            v-for="m in grupo.itens"
+            :key="m.id"
+            class="manutencao-card clickable"
+            @click="abrirDetalhes(m)"
           >
-            <div class="veiculo-card-stripe"></div>
+            <!-- Stripe superior colorida por status -->
+            <div class="card-stripe" :class="m.status === 'EM_ABERTO' ? 'stripe-open' : 'stripe-closed'"></div>
 
-            <div class="veiculo-card-top">
-              <span class="veiculo-card-icon">{{ tipoIcon[veiculo.tipoVeiculo] ?? '🚙' }}</span>
-              <div class="veiculo-card-top-text">
-                <h3 class="veiculo-card-nome">{{ veiculo.nome }}</h3>
-                <span class="placa-badge">{{ veiculo.placaVeiculo }}</span>
+            <!-- Topo: veículo + status -->
+            <div class="card-top">
+              <span class="card-veiculo-icon">{{ tipoIcon[m.veiculo.tipoVeiculo] ?? '🚙' }}</span>
+              <div class="card-top-text">
+                <h3 class="card-nome">{{ m.veiculo.nome }}</h3>
+                <span class="numero-manutencao">Nº {{ m.numeroManutencao }}</span>
+                <span class="placa-badge">{{ m.veiculo.placaVeiculo }}</span>
               </div>
-              <span class="badge badge-purple">{{ veiculo.tipoVeiculo }}</span>
+              <span
+                class="status-badge"
+                :class="m.status === 'EM_ABERTO' ? 'status-open' : 'status-closed'"
+              >
+                {{ m.status === 'EM_ABERTO' ? 'Em Aberto' : 'Finalizada' }}
+              </span>
             </div>
 
-            <div class="veiculo-card-divider"></div>
+            <div class="card-divider"></div>
 
-            <div class="veiculo-card-info">
+            <!-- Infos -->
+            <div class="card-info">
               <div class="info-row">
-                <span class="info-icon">📋</span>
+                <span class="info-icon">🔧</span>
                 <div class="info-text">
-                  <span class="info-label">Frota</span>
-                  <span class="info-value">{{ veiculo.frota || '—' }}</span>
-                </div>
-              </div>
-              <div class="info-row">
-                <span class="info-icon">🎨</span>
-                <div class="info-text">
-                  <span class="info-label">Cor</span>
-                  <span class="info-value">{{ veiculo.cor || '—' }}</span>
+                  <span class="info-label">Tipo</span>
+                  <span
+                    class="badge"
+                    :class="m.tipoManutencao === 'CORRETIVA' ? 'badge-danger' : 'badge-purple'"
+                    style="font-size: 0.7rem; width: fit-content;"
+                  >
+                    {{ formatarTipo(m.tipoManutencao) }}
+                  </span>
                 </div>
               </div>
               <div class="info-row">
                 <span class="info-icon">📅</span>
                 <div class="info-text">
-                  <span class="info-label">Ano</span>
-                  <span class="info-value">{{ veiculo.anoDeFabricacao || '—' }}</span>
+                  <span class="info-label">Agendado</span>
+                  <span class="info-value">{{ formatarData(m.dataAgendamento) }}</span>
                 </div>
               </div>
-
-              <!-- Kilometragem -->
-              <div class="info-row">
-                <span class="info-icon">🛣️</span>
+              <div class="info-row" v-if="m.dataRealizacao">
+                <span class="info-icon">✅</span>
                 <div class="info-text">
-                  <span class="info-label">Kilometragem Atual</span>
-                  <span class="info-value">{{ formatarKm(veiculo.kilometragemAtual) }}</span>
+                  <span class="info-label">Realizado</span>
+                  <span class="info-value">{{ formatarData(m.dataRealizacao) }}</span>
                 </div>
               </div>
-
-              <!-- Próxima Manutenção -->
-              <div class="info-row">
-                <span class="info-icon">🔔</span>
+              <div class="info-row" v-if="m.dataProximaManutencao">
+                <span class="info-icon">📅</span>
                 <div class="info-text">
-                  <span class="info-label">Próxima Manutenção</span>
-                  <span
-                    class="info-value proxima-manutencao"
-                    :class="'status-' + statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao)"
-                  >
-                    <span
-                      v-if="statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) === 'vencida'"
-                      class="status-dot dot-vencida"
-                    ></span>
-                    <span
-                      v-else-if="statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) === 'alerta'"
-                      class="status-dot dot-alerta"
-                    ></span>
-                    <span
-                      v-else-if="statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) === 'ok'"
-                      class="status-dot dot-ok"
-                    ></span>
-                    {{ formatarData(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) }}
-                  </span>
+                  <span class="info-label">Próxima</span>
+                  <span class="info-value" style="color: var(--color-success);">{{ formatarData(m.dataProximaManutencao) }}</span>
+                </div>
+              </div>
+              <div class="info-row">
+                <span class="info-icon">📍</span>
+                <div class="info-text">
+                  <span class="info-label">Kilometragem</span>
+                  <span class="info-value">{{ m.kilometragem }} km</span>
                 </div>
               </div>
             </div>
 
-            <div class="veiculo-card-footer">
-              <button
-                class="btn-card-action btn-card-manutencao"
-                @click.stop="navegarParaManutencao(veiculo.id)"
-                title="Registrar manutenção"
-              >
-                🔧 Manutenção
-              </button>
-              <button
-                class="btn-card-action btn-card-km"
-                @click.stop="abrirModalKm(veiculo)"
-                title="Atualizar kilometragem"
-              >
-                🛣️ KM
-              </button>
-              <button
-                class="btn-card-action btn-card-base"
-                @click.stop="abrirModalBase(veiculo)"
-                title="Trocar base"
-              >
-                🏢 Base
-              </button>
-              <button
-                class="btn-card-action btn-card-delete"
-                :disabled="deletingId === veiculo.id"
-                @click.stop="confirmarExclusao(veiculo.id, veiculo.nome)"
-              >
-                {{ deletingId === veiculo.id ? '⏳' : '🗑️' }} Excluir
-              </button>
+            <!-- Checklist (apenas finalizadas) -->
+            <div v-if="m.status === 'FINALIZADA' && m.servicos && m.servicos.length > 0" class="card-checklist">
+              <span class="checklist-summary-title">Serviços:</span>
+              <div class="checklist-pills">
+                <span v-for="s in m.servicos" :key="s" class="checklist-pill">
+                  {{ getServicoInfo(s)?.icon }} {{ getServicoInfo(s)?.label || s }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
-      </section>
-    </div>
 
-    <!-- ── LISTA (agrupada por base) ── -->
-    <div v-else class="grupos-wrap">
-      <section v-for="grupo in gruposPorBase" :key="grupo.base" class="grupo-base">
-        <div class="grupo-base-header">
-          <span class="grupo-base-icon">🏢</span>
-          <h2 class="grupo-base-nome">{{ grupo.base }}</h2>
-          <span class="grupo-base-count">{{ grupo.itens.length }} veículo(s)</span>
-        </div>
-
-        <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.75rem;">
+        <!-- ── LISTA ── -->
+        <ul v-else class="manutencoes-lista">
           <li
-            v-for="veiculo in grupo.itens"
-            :key="veiculo.id"
-            class="list-item clickable"
-            @click="abrirDetalhes(veiculo)"
+            v-for="m in grupo.itens"
+            :key="m.id"
+            class="list-item manutencao-item clickable"
+            @click="abrirDetalhes(m)"
           >
-            <div class="list-item-info">
-              <h5>
-                <span style="margin-right: 0.5rem;">{{ tipoIcon[veiculo.tipoVeiculo] ?? '🚙' }}</span>
-                {{ veiculo.nome }}
-                <span class="badge badge-purple" style="margin-left: 0.5rem;">{{ veiculo.tipoVeiculo }}</span>
-              </h5>
-              <p>
-                <span>🔖 Placa: <strong>{{ veiculo.placaVeiculo }}</strong></span>
-                <span>📋 Frota: {{ veiculo.frota }}</span>
-                <span>🎨 Cor: {{ veiculo.cor }}</span>
-                <span>📅 Ano: {{ veiculo.anoDeFabricacao }}</span>
-                <span>🛣️ KM: <strong>{{ formatarKm(veiculo.kilometragemAtual) }}</strong></span>
+            <div class="manutencao-top">
+              <div class="info-primary">
                 <span
-                  :class="'list-proxima status-' + statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao)"
+                  class="status-badge"
+                  :class="m.status === 'EM_ABERTO' ? 'status-open' : 'status-closed'"
                 >
-                  <span
-                    v-if="statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) !== 'sem-info'"
-                    class="status-dot"
-                    :class="'dot-' + statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao)"
-                  ></span>
-                  🔔 Próx. Manutenção: <strong>{{ formatarData(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) }}</strong>
+                  {{ m.status === 'EM_ABERTO' ? 'Em Aberto' : 'Finalizada' }}
                 </span>
-              </p>
+                <span class="veiculo-icon-small">{{ tipoIcon[m.veiculo.tipoVeiculo] ?? '🚙' }}</span>
+                <div>
+                  <h5 class="manutencao-veiculo-nome">
+                    {{ m.veiculo.nome }}
+                    <span class="numero-manutencao">Nº {{ m.numeroManutencao }}</span>
+                    <span class="placa-badge">{{ m.veiculo.placaVeiculo }}</span>
+                  </h5>
+                </div>
+              </div>
+
+              <div class="manutencao-badges">
+                <span class="badge" :class="m.tipoManutencao === 'CORRETIVA' ? 'badge-danger' : 'badge-purple'">
+                  {{ formatarTipo(m.tipoManutencao) }}
+                </span>
+                <span class="info-meta">📍 {{ m.kilometragem }} km</span>
+                <span class="info-meta">📅 Agendada: {{ formatarData(m.dataAgendamento) }}</span>
+                <span v-if="m.dataRealizacao" class="info-meta">
+                  ✅ Realizada: {{ formatarData(m.dataRealizacao) }}
+                </span>
+                <span v-if="m.dataProximaManutencao" class="info-meta info-meta-success">
+                  📅 Próxima: {{ formatarData(m.dataProximaManutencao) }}
+                </span>
+              </div>
             </div>
-            <div class="list-item-actions">
-              <button
-                class="btn btn-warning btn-sm"
-                @click.stop="navegarParaManutencao(veiculo.id)"
-              >
-                🔧 Manutenção
-              </button>
-              <button
-                class="btn btn-km btn-sm"
-                @click.stop="abrirModalKm(veiculo)"
-              >
-                🛣️ Atualizar KM
-              </button>
-              <button
-                class="btn btn-base btn-sm"
-                @click.stop="abrirModalBase(veiculo)"
-              >
-                🏢 Trocar Base
-              </button>
-              <button
-                class="btn btn-danger btn-sm"
-                :disabled="deletingId === veiculo.id"
-                @click.stop="confirmarExclusao(veiculo.id, veiculo.nome)"
-              >
-                {{ deletingId === veiculo.id ? '⏳' : '🗑️' }} Excluir
-              </button>
+
+            <div v-if="m.status === 'FINALIZADA'" class="checklist-summary">
+              <span class="checklist-summary-title">Serviços executados:</span>
+              <div class="checklist-pills">
+                <span v-for="s in m.servicos" :key="s" class="checklist-pill">
+                  {{ getServicoInfo(s)?.icon }} {{ getServicoInfo(s)?.label || s }}
+                </span>
+                <span v-if="!m.servicos || m.servicos.length === 0" class="checklist-pill-none">
+                  Nenhum item marcado
+                </span>
+              </div>
             </div>
           </li>
         </ul>
+
       </section>
     </div>
-  </div>
 
-  <!-- Modal de confirmação/exclusão -->
-  <AppModal
-    :show="showModal"
-    :type="modalType"
-    :message="modalMessage"
-    confirm-label="Sim, excluir"
-    cancel-label="Cancelar"
-    @close="fecharModal"
-    @confirm="executarExclusao"
-  />
-
-  <!-- ── Modal Trocar Base ── -->
-  <Teleport to="body">
-    <Transition name="modal-fade">
-      <div v-if="showModalBase" class="custom-modal-overlay" @click.self="showModalBase = false">
-        <div class="custom-modal" role="dialog" aria-modal="true">
-          <div class="custom-modal-header">
-            <span class="custom-modal-icon">🏢</span>
-            <h2 class="custom-modal-title">Trocar Base</h2>
-            <button class="custom-modal-close" @click="showModalBase = false">✕</button>
-          </div>
-          <div class="custom-modal-body">
-            <p class="custom-modal-subtitle">
-              Veículo: <strong>{{ veiculoAlvoBase?.nome }}</strong>
-              — Base atual: <strong>{{ veiculoAlvoBase?.base?.nome ?? '—' }}</strong>
-            </p>
-            <div class="base-select-wrap">
-              <span class="base-select-icon">🏢</span>
-              <select
-                id="select-base"
-                v-model.number="baseSelecionadaId"
-                class="form-control base-select"
-              >
-                <option :value="null" disabled>Selecione uma base...</option>
-                <option
-                  v-for="base in basesDisponiveis"
-                  :key="base.id"
-                  :value="base.id"
-                >
-                  {{ base.nome }}
-                </option>
-              </select>
-              <span class="base-select-arrow">▾</span>
-            </div>
-          </div>
-          <div class="custom-modal-footer">
-            <button class="btn btn-secondary" @click="showModalBase = false">Cancelar</button>
-            <button
-              class="btn btn-primary"
-              :disabled="salvandoBase || !baseSelecionadaId"
-              @click="confirmarTrocaBase"
-            >
-              {{ salvandoBase ? '⏳ Salvando...' : '✅ Confirmar Troca' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
-
-  <!-- ── Modal Atualizar Kilometragem ── -->
-  <Teleport to="body">
-    <Transition name="modal-fade">
-      <div v-if="showModalKm" class="custom-modal-overlay" @click.self="showModalKm = false">
-        <div class="custom-modal custom-modal--sm" role="dialog" aria-modal="true">
-          <div class="custom-modal-header">
-            <span class="custom-modal-icon">🛣️</span>
-            <h2 class="custom-modal-title">Atualizar Kilometragem</h2>
-            <button class="custom-modal-close" @click="showModalKm = false">✕</button>
-          </div>
-          <div class="custom-modal-body">
-            <p class="custom-modal-subtitle">
-              Veículo: <strong>{{ veiculoAlvoKm?.nome }}</strong>
-            </p>
-            <div class="km-atual-info">
-              <span class="km-atual-label">KM atual registrada</span>
-              <span class="km-atual-valor">{{ (veiculoAlvoKm?.kilometragemAtual ?? 0).toLocaleString('pt-BR') }} km</span>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="input-nova-km">Nova Kilometragem</label>
-              <div class="km-input-wrap">
-                <input
-                  id="input-nova-km"
-                  v-model.number="novaKm"
-                  type="number"
-                  class="form-control km-input"
-                  :min="kmMinima"
-                  placeholder="Ex: 125000"
-                  @keyup.enter="confirmarAtualizacaoKm"
-                />
-                <span class="km-input-suffix">km</span>
-              </div>
-              <p v-if="erroKm" class="km-erro">⚠️ {{ erroKm }}</p>
-            </div>
-          </div>
-          <div class="custom-modal-footer">
-            <button class="btn btn-secondary" @click="showModalKm = false">Cancelar</button>
-            <button
-              class="btn btn-primary"
-              :disabled="salvandoKm || novaKm == null"
-              @click="confirmarAtualizacaoKm"
-            >
-              {{ salvandoKm ? '⏳ Salvando...' : '✅ Atualizar' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
-
-  <!-- ── Modal Detalhes do Veículo ── -->
-  <Teleport to="body">
-    <Transition name="modal-fade">
-      <div v-if="veiculoDetalhes" class="custom-modal-overlay" @click.self="fecharDetalhes">
-        <div class="custom-modal custom-modal--lg" role="dialog" aria-modal="true">
-          <div class="custom-modal-header">
-            <span class="custom-modal-icon">{{ tipoIcon[veiculoDetalhes.tipoVeiculo] ?? '🚙' }}</span>
-            <div style="flex: 1;">
-              <h2 class="custom-modal-title" style="margin-bottom: 0.25rem;">{{ veiculoDetalhes.nome }}</h2>
-              <span class="placa-badge">{{ veiculoDetalhes.placaVeiculo }}</span>
-            </div>
-            <button class="custom-modal-close" @click="fecharDetalhes">✕</button>
-          </div>
-
-          <div class="custom-modal-body">
-            <div class="modal-grid-info">
-              <div class="modal-info-item">
-                <span class="modal-info-label">🏢 Base</span>
-                <span class="modal-info-value">{{ veiculoDetalhes.base?.nome || 'Sem base' }}</span>
-              </div>
-              <div class="modal-info-item">
-                <span class="modal-info-label">📋 Frota</span>
-                <span class="modal-info-value">{{ veiculoDetalhes.frota || '—' }}</span>
-              </div>
-              <div class="modal-info-item">
-                <span class="modal-info-label">🎨 Cor</span>
-                <span class="modal-info-value">{{ veiculoDetalhes.cor || '—' }}</span>
-              </div>
-              <div class="modal-info-item">
-                <span class="modal-info-label">📅 Ano</span>
-                <span class="modal-info-value">{{ veiculoDetalhes.anoDeFabricacao || '—' }}</span>
-              </div>
-              <div class="modal-info-item">
-                <span class="modal-info-label">🛣️ Kilometragem</span>
-                <span class="modal-info-value">{{ formatarKm(veiculoDetalhes.kilometragemAtual) }}</span>
-              </div>
-              <div class="modal-info-item">
-                <span class="modal-info-label">🔔 Próxima Manutenção</span>
-                <span
-                  class="modal-info-value"
-                  :class="'status-' + statusProximaManutencao(getUltimaManutencao(veiculoDetalhes.id)?.dataProximaManutencao)"
-                >
-                  {{ formatarData(getUltimaManutencao(veiculoDetalhes.id)?.dataProximaManutencao) }}
-                </span>
+    <!-- ── MODAL DE DETALHES ── -->
+    <Teleport to="body">
+      <div v-if="manutencaoSelecionada" class="modal-backdrop" @click.self="fecharModal">
+        <div class="modal-content printable-modal">
+          <div class="modal-header">
+            <div class="modal-header-info">
+              <span class="modal-icon">{{ tipoIcon[manutencaoSelecionada.veiculo.tipoVeiculo] ?? '🚙' }}</span>
+              <div>
+                <h3 class="modal-title">Detalhes da Manutenção</h3>
+                <span class="numero-manutencao">Nº {{ manutencaoSelecionada.numeroManutencao }}</span>
               </div>
             </div>
+            <button class="modal-close-btn no-print" @click="fecharModal" title="Fechar">✖</button>
+          </div>
 
+          <div class="modal-body">
+            <!-- Bloco do Veículo -->
             <div class="modal-section">
-              <h4 class="modal-section-title">🗂️ Histórico de Manutenções</h4>
-              <ul v-if="manutencoesDoVeiculo.length" class="historico-lista">
-                <li v-for="m in manutencoesDoVeiculo" :key="m.id" class="historico-item">
+              <h4 class="modal-section-title">🚙 Informações do Veículo</h4>
+              <div class="modal-grid">
+                <div>
+                  <span class="modal-label">Veículo</span>
+                  <span class="modal-value">{{ manutencaoSelecionada.veiculo.nome }}</span>
+                </div>
+                <div>
+                  <span class="modal-label">Placa</span>
+                  <span class="modal-value"><span class="placa-badge">{{ manutencaoSelecionada.veiculo.placaVeiculo }}</span></span>
+                </div>
+                <div>
+                  <span class="modal-label">Base</span>
+                  <span class="modal-value">{{ manutencaoSelecionada.veiculo.base?.nome || 'Sem base definida' }}</span>
+                </div>
+                <div>
+                  <span class="modal-label">Tipo de Veículo</span>
+                  <span class="modal-value">{{ manutencaoSelecionada.veiculo.tipoVeiculo }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bloco da Manutenção -->
+            <div class="modal-section">
+              <h4 class="modal-section-title">🔧 Dados da Manutenção</h4>
+              <div class="modal-grid">
+                <div>
+                  <span class="modal-label">Status</span>
                   <span
                     class="status-badge"
-                    :class="m.status === 'EM_ABERTO' ? 'status-open' : 'status-closed'"
+                    :class="manutencaoSelecionada.status === 'EM_ABERTO' ? 'status-open' : 'status-closed'"
                   >
-                    {{ m.status === 'EM_ABERTO' ? 'Em Aberto' : 'Finalizada' }}
+                    {{ manutencaoSelecionada.status === 'EM_ABERTO' ? 'Em Aberto' : 'Finalizada' }}
                   </span>
-                  <span class="historico-numero">Nº {{ m.numeroManutencao }}</span>
-                  <span class="historico-data">📅 {{ formatarData(m.dataAgendamento) }}</span>
-                </li>
-              </ul>
-              <p v-else class="text-muted-italic">Nenhuma manutenção registrada para este veículo.</p>
+                </div>
+                <div>
+                  <span class="modal-label">Tipo de Manutenção</span>
+                  <span class="badge" :class="manutencaoSelecionada.tipoManutencao === 'CORRETIVA' ? 'badge-danger' : 'badge-purple'">
+                    {{ formatarTipo(manutencaoSelecionada.tipoManutencao) }}
+                  </span>
+                </div>
+                <div>
+                  <span class="modal-label">Quilometragem</span>
+                  <span class="modal-value">{{ manutencaoSelecionada.kilometragem }} km</span>
+                </div>
+                <div>
+                  <span class="modal-label">Agendado Para</span>
+                  <span class="modal-value">{{ formatarData(manutencaoSelecionada.dataAgendamento) }}</span>
+                </div>
+                <div>
+                  <span class="modal-label">Data de Realização</span>
+                  <span class="modal-value">{{ formatarData(manutencaoSelecionada.dataRealizacao) || 'Pendente' }}</span>
+                </div>
+                <div>
+                  <span class="modal-label">Próxima Manutenção</span>
+                  <span class="modal-value" style="color: var(--color-success);">
+                    {{ formatarData(manutencaoSelecionada.dataProximaManutencao) || 'Não agendada' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Serviços Executados -->
+            <div class="modal-section">
+              <h4 class="modal-section-title">📋 Serviços Executados</h4>
+              <div v-if="manutencaoSelecionada.servicos && manutencaoSelecionada.servicos.length > 0" class="checklist-pills">
+                <span v-for="s in manutencaoSelecionada.servicos" :key="s" class="checklist-pill">
+                  {{ getServicoInfo(s)?.icon }} {{ getServicoInfo(s)?.label || s }}
+                </span>
+              </div>
+              <p v-else class="checklist-pill-none">Nenhum serviço registrado/executado.</p>
             </div>
           </div>
 
-          <div class="custom-modal-footer">
-            <button class="btn-card-action btn-card-manutencao" @click="irParaManutencaoPeloModal">
-              🔧 Manutenção
+          <div class="modal-footer no-print">
+            <button class="btn btn-secondary" @click="imprimirDetalhes">
+              🖨️ Imprimir / Salvar PDF
             </button>
-            <button class="btn-card-action btn-card-km" @click="abrirKmPeloModal">
-              🛣️ KM
-            </button>
-            <button class="btn-card-action btn-card-base" @click="abrirBasePeloModal">
-              🏢 Base
-            </button>
-            <button class="btn btn-secondary" @click="fecharDetalhes">Fechar</button>
+            <button class="btn btn-primary" @click="fecharModal">Fechar</button>
           </div>
         </div>
       </div>
-    </Transition>
-  </Teleport>
+    </Teleport>
+  </div>
 </template>
 
 <style scoped>
@@ -794,12 +541,7 @@ onMounted(carregarVeiculos)
   flex-wrap: wrap;
 }
 
-/* ── Elementos clicáveis ── */
-.clickable {
-  cursor: pointer;
-}
-
-/* ── Toggle Visualização ── */
+/* ── Toggle visualização ── */
 .view-toggle {
   display: flex;
   background: var(--color-surface-2);
@@ -835,6 +577,11 @@ onMounted(carregarVeiculos)
   box-shadow: 0 2px 8px rgba(238, 130, 39, 0.35);
 }
 
+/* ── Interatividade nos itens ── */
+.clickable {
+  cursor: pointer;
+}
+
 /* ── Barra de filtros ── */
 .filtros-bar {
   display: flex;
@@ -847,7 +594,7 @@ onMounted(carregarVeiculos)
 .busca-wrap {
   position: relative;
   flex: 1;
-  min-width: 220px;
+  min-width: 200px;
   display: flex;
   align-items: center;
 }
@@ -875,23 +622,33 @@ onMounted(carregarVeiculos)
   font-size: 0.85rem;
   padding: 0.2rem;
 }
-.busca-clear:hover {
-  color: var(--text-primary);
+.busca-clear:hover { color: var(--text-primary); }
+
+.data-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 155px;
 }
 
 .ordenacao-wrap {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  min-width: 200px;
+  min-width: 175px;
 }
 
-.ordenacao-label {
+.filtro-label {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+.limpar-btn {
+  align-self: flex-end;
+  white-space: nowrap;
 }
 
 /* ── Grupos por Base ── */
@@ -910,9 +667,7 @@ onMounted(carregarVeiculos)
   border-bottom: 1px solid var(--color-border);
 }
 
-.grupo-base-icon {
-  font-size: 1.15rem;
-}
+.grupo-base-icon { font-size: 1.15rem; }
 
 .grupo-base-nome {
   margin: 0;
@@ -932,14 +687,14 @@ onMounted(carregarVeiculos)
   border-radius: 99px;
 }
 
-/* ── Grid de Cards ── */
-.veiculos-grid {
+/* ── CARDS ── */
+.manutencoes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.25rem;
 }
 
-.veiculo-card {
+.manutencao-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -949,31 +704,34 @@ onMounted(carregarVeiculos)
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.veiculo-card:hover {
+.manutencao-card:hover {
   transform: translateY(-3px);
   border-color: rgba(238, 130, 39, 0.4);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(238, 130, 39, 0.1);
 }
 
-.veiculo-card-stripe {
+.card-stripe {
   height: 4px;
-  background: var(--gradient);
   flex-shrink: 0;
 }
 
-.veiculo-card-top {
+.stripe-open  { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.stripe-closed { background: linear-gradient(90deg, #10b981, #34d399); }
+
+.card-top {
   padding: 1.1rem 1.25rem 0.85rem;
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
 }
 
-.veiculo-card-icon {
+.card-veiculo-icon {
   font-size: 1.75rem;
   line-height: 1;
+  flex-shrink: 0;
 }
 
-.veiculo-card-top-text {
+.card-top-text {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -981,12 +739,22 @@ onMounted(carregarVeiculos)
   gap: 0.35rem;
 }
 
-.veiculo-card-nome {
+.card-nome {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.numero-manutencao {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent-1);
+  letter-spacing: 0.02em;
 }
 
 .placa-badge {
@@ -1004,13 +772,13 @@ onMounted(carregarVeiculos)
   border-radius: 99px;
 }
 
-.veiculo-card-divider {
+.card-divider {
   height: 1px;
   background: var(--color-border);
   margin: 0 1.25rem;
 }
 
-.veiculo-card-info {
+.card-info {
   padding: 0.9rem 1.25rem;
   display: flex;
   flex-direction: column;
@@ -1051,442 +819,19 @@ onMounted(carregarVeiculos)
 .info-value {
   font-size: 0.875rem;
   color: var(--text-primary);
-  word-break: break-word;
   line-height: 1.4;
 }
 
-.base-nome {
-  font-weight: 600;
-  color: var(--accent-3, #f6a55c);
-}
-
-.veiculo-card-footer {
-  padding: 0.85rem 1.25rem;
+.card-checklist {
   border-top: 1px solid var(--color-border);
-  display: flex;
-  gap: 0.6rem;
+  padding: 0.65rem 1.25rem;
   background: var(--color-surface-2);
-}
-
-.btn-card-action {
-  flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: all 0.2s ease;
-  text-decoration: none;
-}
-
-.btn-card-manutencao {
-  background: rgba(245, 158, 11, 0.12);
-  color: #fbbf24;
-  border-color: rgba(245, 158, 11, 0.25);
-}
-
-.btn-card-manutencao:hover {
-  background: rgba(245, 158, 11, 0.22);
-  border-color: rgba(245, 158, 11, 0.5);
-}
-
-.btn-card-delete {
-  background: rgba(239, 68, 68, 0.1);
-  color: #f87171;
-  border-color: rgba(239, 68, 68, 0.2);
-}
-
-.btn-card-delete:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.45);
-}
-
-.btn-card-delete:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* ── Status Próxima Manutenção ── */
-.proxima-manutencao {
-  display: inline-flex;
-  align-items: center;
+  flex-direction: column;
   gap: 0.4rem;
-  font-weight: 600;
 }
 
-.status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  animation: pulse-dot 2s infinite;
-}
-
-.dot-vencida {
-  background: #ef4444;
-  box-shadow: 0 0 0 0 rgba(239,68,68,0.5);
-}
-
-.dot-alerta {
-  background: #f59e0b;
-  box-shadow: 0 0 0 0 rgba(245,158,11,0.5);
-}
-
-.dot-ok {
-  background: #22c55e;
-  box-shadow: 0 0 0 0 rgba(34,197,94,0.5);
-  animation: none;
-}
-
-@keyframes pulse-dot {
-  0%   { transform: scale(1); opacity: 1; }
-  50%  { transform: scale(1.4); opacity: 0.7; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-.status-vencida .info-value,
-.status-vencida {
-  color: #f87171 !important;
-}
-
-.status-alerta .info-value,
-.status-alerta {
-  color: #fbbf24 !important;
-}
-
-.status-ok .info-value,
-.status-ok {
-  color: #4ade80 !important;
-}
-
-/* lista: span de próxima manutenção */
-.list-proxima {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: inherit;
-}
-
-@media (max-width: 576px) {
-  .filtros-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .ordenacao-wrap {
-    min-width: 0;
-  }
-}
-
-/* ── Botões novos nos cards ── */
-.btn-card-km {
-  background: rgba(56, 189, 248, 0.1);
-  color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.25);
-}
-.btn-card-km:hover {
-  background: rgba(56, 189, 248, 0.2);
-  border-color: rgba(56, 189, 248, 0.5);
-}
-
-.btn-card-base {
-  background: rgba(139, 92, 246, 0.1);
-  color: #a78bfa;
-  border-color: rgba(139, 92, 246, 0.25);
-}
-.btn-card-base:hover {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: rgba(139, 92, 246, 0.5);
-}
-
-/* ── Botões novos na lista ── */
-.btn-km {
-  background: rgba(56, 189, 248, 0.12);
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.3);
-}
-.btn-km:hover {
-  background: rgba(56, 189, 248, 0.22);
-}
-
-.btn-base {
-  background: rgba(139, 92, 246, 0.12);
-  color: #a78bfa;
-  border: 1px solid rgba(139, 92, 246, 0.3);
-}
-.btn-base:hover {
-  background: rgba(139, 92, 246, 0.22);
-}
-
-/* ── Modais customizados ── */
-.custom-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  padding: 1rem;
-}
-
-.custom-modal {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  width: 100%;
-  max-width: 560px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
-}
-
-.custom-modal--sm {
-  max-width: 420px;
-}
-
-.custom-modal--lg {
-  max-width: 680px;
-}
-
-.custom-modal-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface-2);
-  flex-shrink: 0;
-}
-
-.custom-modal-icon {
-  font-size: 1.5rem;
-  line-height: 1;
-}
-
-.custom-modal-title {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  flex: 1;
-}
-
-.custom-modal-close {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-sm);
-  transition: all 0.15s ease;
-}
-.custom-modal-close:hover {
-  background: var(--color-surface-3);
-  color: var(--text-primary);
-}
-
-.custom-modal-body {
-  padding: 1.5rem;
-  overflow-y: auto;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.custom-modal-subtitle {
-  margin: 0;
-  font-size: 0.88rem;
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-
-.custom-modal-footer {
-  display: flex;
-  gap: 0.75rem;
-  justify-content: flex-end;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-surface-2);
-  flex-shrink: 0;
-}
-
-/* ── Dropdown de seleção de base ── */
-.base-select-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.base-select-icon {
-  position: absolute;
-  left: 0.9rem;
-  font-size: 1rem;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.base-select {
-  padding-left: 2.5rem !important;
-  padding-right: 2.5rem !important;
-  appearance: none;
-  -webkit-appearance: none;
-  cursor: pointer;
-  border-color: rgba(139, 92, 246, 0.35) !important;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.base-select:focus {
-  border-color: #a78bfa !important;
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18) !important;
-  outline: none;
-}
-
-.base-select-arrow {
-  position: absolute;
-  right: 0.9rem;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  pointer-events: none;
-}
-
-/* ── Input de kilometragem ── */
-.km-atual-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.85rem 1rem;
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.km-atual-label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-}
-
-.km-atual-valor {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #38bdf8;
-}
-
-.km-input-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.km-input {
-  padding-right: 3rem !important;
-}
-
-.km-input-suffix {
-  position: absolute;
-  right: 0.9rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  pointer-events: none;
-}
-
-.km-erro {
-  margin: 0.5rem 0 0;
-  font-size: 0.82rem;
-  color: #f87171;
-  line-height: 1.4;
-}
-
-/* ── Modal de Detalhes do Veículo ── */
-.modal-grid-info {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  padding: 1rem;
-  border-radius: var(--radius-md);
-}
-
-.modal-info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.modal-info-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.modal-info-value {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.modal-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.modal-section-title {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.historico-lista {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0;
-  max-height: 260px;
-  overflow-y: auto;
-}
-
-.historico-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  padding: 0.55rem 0.85rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
-  flex-wrap: wrap;
-}
-
-.historico-numero {
-  font-weight: 600;
-  color: var(--accent-1);
-}
-
-.historico-data {
-  color: var(--text-muted);
-  margin-left: auto;
-}
-
+/* ── Status badge ── */
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -1512,28 +857,311 @@ onMounted(carregarVeiculos)
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
-.text-muted-italic {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  font-style: italic;
-  margin: 0;
+.badge-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-danger);
 }
 
-/* ── Animação dos modais ── */
-.modal-fade-enter-active,
-.modal-fade-leave-active {
-  transition: opacity 0.2s ease;
+/* ── Checklist ── */
+.checklist-summary {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
-.modal-fade-enter-active .custom-modal,
-.modal-fade-leave-active .custom-modal {
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+
+.checklist-summary-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
-.modal-fade-enter-from,
-.modal-fade-leave-to {
-  opacity: 0;
+
+.checklist-pills {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
 }
-.modal-fade-enter-from .custom-modal {
-  transform: scale(0.92) translateY(12px);
-  opacity: 0;
+
+.checklist-pill {
+  font-size: 0.72rem;
+  background: rgba(238, 130, 39, 0.1);
+  color: var(--accent-1);
+  border: 1px solid rgba(238, 130, 39, 0.2);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.checklist-pill-none {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Lista ── */
+.manutencoes-lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.manutencao-item {
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: stretch;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.manutencao-item:hover {
+  border-color: rgba(238, 130, 39, 0.4);
+}
+
+.manutencao-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.info-primary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.veiculo-icon-small {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.manutencao-veiculo-nome {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.manutencao-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.info-meta {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.info-meta-success { color: var(--color-success); }
+
+/* ── Modal ── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-surface-2);
+}
+
+.modal-header-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.modal-icon {
+  font-size: 1.75rem;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: var(--radius-sm);
+  transition: color 0.2s;
+}
+
+.modal-close-btn:hover {
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.modal-section-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent-1);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.35rem;
+}
+
+.modal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.modal-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.modal-value {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  background: var(--color-surface-2);
+}
+
+/* ── ESTILOS DE IMPRESSÃO EXCLUSIVA DA MANUTENÇÃO ── */
+@media print {
+  /* Esconde o app e os elementos do fundo da página */
+  body.printing-modal-active > *:not(.modal-backdrop) {
+    display: none !important;
+  }
+
+  /* Desativa a sobreposição escura da modal */
+  .modal-backdrop {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+
+  /* Formata a caixa da modal para ajustar à página */
+  .printable-modal {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    background: #fff !important;
+    color: #000 !important;
+    border-radius: 8px !important;
+  }
+
+  .modal-body {
+    overflow: visible !important;
+  }
+
+  /* Oculta os botões e ícones interativos na impressão */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Ajusta cores para garantir legibilidade no papel ou arquivo PDF */
+  .modal-title, 
+  .modal-value, 
+  .modal-section-title {
+    color: #000 !important;
+  }
+
+  .placa-badge, 
+  .checklist-pill, 
+  .status-badge, 
+  .badge {
+    border: 1px solid #999 !important;
+    color: #000 !important;
+    background: #f5f5f5 !important;
+  }
+}
+
+/* ── Responsivo ── */
+@media (max-width: 768px) {
+  .filtros-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .data-wrap,
+  .ordenacao-wrap {
+    min-width: 0;
+  }
+  .manutencao-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 576px) {
+  .checklist-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
 }
 </style>

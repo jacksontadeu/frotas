@@ -117,8 +117,8 @@ function toggleExpand(manutencao: ManutencaoResponse) {
     // Inicializa com os dados atuais da manutenção
     servicosSelecionados.value = manutencao.servicos ? [...manutencao.servicos] : []
     formKilometragem.value = manutencao.kilometragem
-    formDataRealizacao.value = manutencao.dataRealizacao
-    formDescricaoServico.value = manutencao.descricaoServico ?? ''
+    formDataRealizacao.value = manutencao.dataRealizacao ?? ''
+    formDescricaoServico.value = manutencao.descricao ?? ''
   }
 }
 
@@ -137,7 +137,7 @@ function toggleServico(servico: Servico) {
 
 async function finalizarAtendimento(id: number) {
   const manutencao = manutencoes.value.find((m) => m.id === id)
-  
+
   // Normalizando para caixa alta antes de comparar
   const isCorretiva = manutencao?.tipoManutencao?.toUpperCase() === 'CORRETIVA'
 
@@ -145,11 +145,11 @@ async function finalizarAtendimento(id: number) {
   try {
     await manutencaoService.atender(id, {
       servicos: isCorretiva ? [] : servicosSelecionados.value,
-      descricaoServico: isCorretiva ? formDescricaoServico.value : undefined,
-      kilometragem: formKilometragem.value,
+      descricao: isCorretiva ? formDescricaoServico.value : undefined,
+      kilometragem: formKilometragem.value ?? undefined,
       dataRealizacao: formDataRealizacao.value,
     })
-    
+
     expandedId.value = null
     dispararModal('success', 'Manutenção concluída com sucesso!')
   } catch (err: any) {
@@ -166,7 +166,7 @@ const tipoIcon: Record<string, string> = {
   VAN: '🚐',
 }
 
-const formatarData = (dataStr: string) => {
+const formatarData = (dataStr: string | null) => {
   if (!dataStr) return ''
   const [ano, mes, dia] = dataStr.split('-')
   return `${dia}/${mes}/${ano}`

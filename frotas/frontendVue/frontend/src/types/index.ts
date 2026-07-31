@@ -44,7 +44,7 @@ export interface VeiculoDTORequest {
 export interface ManutencaoDTORequest {
   dataAgendamento: string
   kilometragem: number | null
-  tipoManutencao: TipoManutencao
+  tipoManutencao: TipoManutencao | ''
   veiculo_id: number | null
   servicos?: Servico[]
 }
@@ -105,7 +105,7 @@ export type TipoManutencao = 'PREVENTIVA_TROCA_DE_OLEO' | 'PREVENTIVA_KIT_CORREI
 export const TIPOS_MANUTENCAO = [
   { value: 'PREVENTIVA_TROCA_DE_OLEO', label: 'Preventiva - Troca de Óleo' },
   { value: 'PREVENTIVA_KIT_CORREIA_DENTADA', label: 'Preventiva - Kit Correia Dentada' },
-  { value: 'CORRETIVA', label: 'Corretiva' },
+  { value: 'CORRETIVA', label: 'Corretiva' } as const,
 ]
 
 export enum Cor {
