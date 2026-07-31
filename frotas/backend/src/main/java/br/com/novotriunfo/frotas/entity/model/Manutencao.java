@@ -25,9 +25,6 @@ public class Manutencao {
 
     private String numeroManutencao;
     private LocalDate dataAgendamento;
-
-    private LocalDate dataProximaManutencao;
-
     private LocalDate dataRealizacao;
 
     private String descricao;

@@ -44,7 +44,7 @@ public class AtendimentoService {
             veiculo.setKilometragemAtual(request.getKilometragem());
             manutencaoRepository.save(manutencao);
             veiculoRepository.save(veiculo);
-        } else {
+        } else if (manutencaoOpt.get().getTipoManutencao().equals(TipoManutencao.PREVENTIVA_TROCA_DE_OLEO)) {
             Manutencao manutencao = manutencaoOpt.get();
             manutencao.setNumeroManutencao(manutencaoOpt.get().getNumeroManutencao());
             manutencao.setServicos(request.getServicos());
@@ -56,6 +56,24 @@ public class AtendimentoService {
             if (request.getKilometragem() < veiculo.getKilometragemAtual()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A quilometragem informada não pode ser menor que a quilometragem atual do veículo");
             }
+            veiculo.setDataProximaTrocaOleo(request.getDataRealizacao().plusMonths(6));
+            veiculo.setKilometragemAtual(request.getKilometragem());
+            manutencaoRepository.save(manutencao);
+            veiculoRepository.save(veiculo);
+        }else{
+            Manutencao manutencao = manutencaoOpt.get();
+            manutencao.setNumeroManutencao(manutencaoOpt.get().getNumeroManutencao());
+            manutencao.setServicos(request.getServicos());
+            manutencao.setDescricao(null);
+            manutencao.setKilometragem(request.getKilometragem());
+            manutencao.setDataRealizacao(request.getDataRealizacao());
+            manutencao.setStatus(StatusManutencao.FINALIZADA);
+            Veiculo veiculo = manutencao.getVeiculo();
+            if (request.getKilometragem() < veiculo.getKilometragemAtual()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A quilometragem informada não pode ser menor que a quilometragem atual do veículo");
+            }
+            veiculo.setDataProximaTrocaOleo(request.getDataRealizacao().plusMonths(6));
+            veiculo.setDataProximaCorreiraDentada(request.getDataRealizacao().plusMonths(24));
             veiculo.setKilometragemAtual(request.getKilometragem());
             manutencaoRepository.save(manutencao);
             veiculoRepository.save(veiculo);

@@ -40,6 +40,36 @@ function getUltimaManutencao(veiculoId: number): ManutencaoResponse | undefined 
   return ultimaManutencaoPorVeiculo.value.get(veiculoId)
 }
 
+const ultimaManutencaoOleoPorVeiculo = computed(() => {
+  const mapa = new Map<number, ManutencaoResponse>()
+  for (const m of manutencoes.value) {
+    if (!m.veiculo?.id || m.tipoManutencao !== 'PREVENTIVA_TROCA_DE_OLEO') continue
+    const existente = mapa.get(m.veiculo.id)
+    if (!existente || m.id > existente.id) {
+      mapa.set(m.veiculo.id, m)
+    }
+  }
+  return mapa
+})
+function getUltimaManutencaoOleo(veiculoId: number): ManutencaoResponse | undefined {
+  return ultimaManutencaoOleoPorVeiculo.value.get(veiculoId)
+}
+
+const ultimaManutencaoCorreiaPorVeiculo = computed(() => {
+  const mapa = new Map<number, ManutencaoResponse>()
+  for (const m of manutencoes.value) {
+    if (!m.veiculo?.id || m.tipoManutencao !== 'PREVENTIVA_KIT_CORREIA_DENTADA') continue
+    const existente = mapa.get(m.veiculo.id)
+    if (!existente || m.id > existente.id) {
+      mapa.set(m.veiculo.id, m)
+    }
+  }
+  return mapa
+})
+function getUltimaManutencaoCorreia(veiculoId: number): ManutencaoResponse | undefined {
+  return ultimaManutencaoCorreiaPorVeiculo.value.get(veiculoId)
+}
+
 function formatarKm(km: number | null | undefined): string {
   if (km == null) return '—'
   return km.toLocaleString('pt-BR') + ' km'
@@ -62,6 +92,11 @@ function statusProximaManutencao(data: string | null | undefined): StatusManuten
   if (diffDias < 0) return 'vencida'
   if (diffDias <= 30) return 'alerta'
   return 'ok'
+}
+
+function getUltimaDataRealizada(m: ManutencaoResponse | undefined): string | null | undefined {
+  if (!m) return null
+  return m.dataRealizacao || m.dataAgendamento || null
 }
 
 async function carregarVeiculos() {
@@ -442,28 +477,56 @@ onMounted(carregarVeiculos)
                 </div>
               </div>
 
-              <!-- Próxima Manutenção -->
+              <!-- Últ. Óleo -->
               <div class="info-row">
-                <span class="info-icon">🔔</span>
+                <span class="info-icon">🛢️</span>
                 <div class="info-text">
-                  <span class="info-label">Próxima Manutenção</span>
+                  <span class="info-label">Últ. Troca Óleo</span>
+                  <span class="info-value">
+                    {{ formatarData(getUltimaDataRealizada(getUltimaManutencaoOleo(veiculo.id))) }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Últ. Correia -->
+              <div class="info-row">
+                <span class="info-icon">⚙️</span>
+                <div class="info-text">
+                  <span class="info-label">Últ. Troca Correia</span>
+                  <span class="info-value">
+                    {{ formatarData(getUltimaDataRealizada(getUltimaManutencaoCorreia(veiculo.id))) }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Próx. Óleo -->
+              <div class="info-row">
+                <span class="info-icon">🛢️</span>
+                <div class="info-text">
+                  <span class="info-label">Próx. Troca Óleo</span>
                   <span
                     class="info-value proxima-manutencao"
-                    :class="'status-' + statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao)"
+                    :class="'status-' + statusProximaManutencao(veiculo.dataProximaTrocaOleo)"
                   >
-                    <span
-                      v-if="statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) === 'vencida'"
-                      class="status-dot dot-vencida"
-                    ></span>
-                    <span
-                      v-else-if="statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) === 'alerta'"
-                      class="status-dot dot-alerta"
-                    ></span>
-                    <span
-                      v-else-if="statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) === 'ok'"
-                      class="status-dot dot-ok"
-                    ></span>
-                    {{ formatarData(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) }}
+                    <span v-if="statusProximaManutencao(veiculo.dataProximaTrocaOleo) !== 'sem-info'"
+                      class="status-dot" :class="'dot-' + statusProximaManutencao(veiculo.dataProximaTrocaOleo)"></span>
+                    {{ formatarData(veiculo.dataProximaTrocaOleo) }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Próx. Correia -->
+              <div class="info-row">
+                <span class="info-icon">⚙️</span>
+                <div class="info-text">
+                  <span class="info-label">Próx. Troca Correia</span>
+                  <span
+                    class="info-value proxima-manutencao"
+                    :class="'status-' + statusProximaManutencao(veiculo.dataProximaCorreiraDentada)"
+                  >
+                    <span v-if="statusProximaManutencao(veiculo.dataProximaCorreiraDentada) !== 'sem-info'"
+                      class="status-dot" :class="'dot-' + statusProximaManutencao(veiculo.dataProximaCorreiraDentada)"></span>
+                    {{ formatarData(veiculo.dataProximaCorreiraDentada) }}
                   </span>
                 </div>
               </div>
@@ -532,15 +595,21 @@ onMounted(carregarVeiculos)
                 <span>🎨 Cor: {{ veiculo.cor }}</span>
                 <span>📅 Ano: {{ veiculo.anoDeFabricacao }}</span>
                 <span>🛣️ KM: <strong>{{ formatarKm(veiculo.kilometragemAtual) }}</strong></span>
+                <span>🛢️ Últ. Óleo: <strong>{{ formatarData(getUltimaDataRealizada(getUltimaManutencaoOleo(veiculo.id))) }}</strong></span>
+                <span>⚙️ Últ. Correia: <strong>{{ formatarData(getUltimaDataRealizada(getUltimaManutencaoCorreia(veiculo.id))) }}</strong></span>
                 <span
-                  :class="'list-proxima status-' + statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao)"
+                  :class="'list-proxima status-' + statusProximaManutencao(veiculo.dataProximaTrocaOleo)"
                 >
-                  <span
-                    v-if="statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) !== 'sem-info'"
-                    class="status-dot"
-                    :class="'dot-' + statusProximaManutencao(getUltimaManutencao(veiculo.id)?.dataProximaManutencao)"
-                  ></span>
-                  🔔 Próx. Manutenção: <strong>{{ formatarData(getUltimaManutencao(veiculo.id)?.dataProximaManutencao) }}</strong>
+                  <span v-if="statusProximaManutencao(veiculo.dataProximaTrocaOleo) !== 'sem-info'"
+                    class="status-dot" :class="'dot-' + statusProximaManutencao(veiculo.dataProximaTrocaOleo)"></span>
+                  🛢️ Próx. Óleo: <strong>{{ formatarData(veiculo.dataProximaTrocaOleo) }}</strong>
+                </span>
+                <span
+                  :class="'list-proxima status-' + statusProximaManutencao(veiculo.dataProximaCorreiraDentada)"
+                >
+                  <span v-if="statusProximaManutencao(veiculo.dataProximaCorreiraDentada) !== 'sem-info'"
+                    class="status-dot" :class="'dot-' + statusProximaManutencao(veiculo.dataProximaCorreiraDentada)"></span>
+                  ⚙️ Próx. Correia: <strong>{{ formatarData(veiculo.dataProximaCorreiraDentada) }}</strong>
                 </span>
               </p>
             </div>
@@ -750,12 +819,33 @@ onMounted(carregarVeiculos)
                   <span class="modal-info-value" style="color: #38bdf8; font-weight: 700;">{{ formatarKm(veiculoDetalhes.kilometragemAtual) }}</span>
                 </div>
                 <div class="modal-info-item">
-                  <span class="modal-info-label">Próxima Manutenção</span>
-                  <span class="modal-info-value proxima-manutencao" :class="'status-' + statusProximaManutencao(getUltimaManutencao(veiculoDetalhes.id)?.dataProximaManutencao)">
-                    <span v-if="statusProximaManutencao(getUltimaManutencao(veiculoDetalhes.id)?.dataProximaManutencao) === 'vencida'" class="status-dot dot-vencida"></span>
-                    <span v-else-if="statusProximaManutencao(getUltimaManutencao(veiculoDetalhes.id)?.dataProximaManutencao) === 'alerta'" class="status-dot dot-alerta"></span>
-                    <span v-else-if="statusProximaManutencao(getUltimaManutencao(veiculoDetalhes.id)?.dataProximaManutencao) === 'ok'" class="status-dot dot-ok"></span>
-                    {{ formatarData(getUltimaManutencao(veiculoDetalhes.id)?.dataProximaManutencao) }}
+                  <span class="modal-info-label">Últ. Troca Óleo</span>
+                  <span class="modal-info-value">
+                    {{ formatarData(getUltimaDataRealizada(getUltimaManutencaoOleo(veiculoDetalhes.id))) }}
+                  </span>
+                </div>
+                <div class="modal-info-item">
+                  <span class="modal-info-label">Últ. Troca Correia</span>
+                  <span class="modal-info-value">
+                    {{ formatarData(getUltimaDataRealizada(getUltimaManutencaoCorreia(veiculoDetalhes.id))) }}
+                  </span>
+                </div>
+                <div class="modal-info-item">
+                  <span class="modal-info-label">Próx. Troca Óleo</span>
+                  <span class="modal-info-value proxima-manutencao" :class="'status-' + statusProximaManutencao(veiculoDetalhes.dataProximaTrocaOleo)">
+                    <span v-if="statusProximaManutencao(veiculoDetalhes.dataProximaTrocaOleo) === 'vencida'" class="status-dot dot-vencida"></span>
+                    <span v-else-if="statusProximaManutencao(veiculoDetalhes.dataProximaTrocaOleo) === 'alerta'" class="status-dot dot-alerta"></span>
+                    <span v-else-if="statusProximaManutencao(veiculoDetalhes.dataProximaTrocaOleo) === 'ok'" class="status-dot dot-ok"></span>
+                    {{ formatarData(veiculoDetalhes.dataProximaTrocaOleo) }}
+                  </span>
+                </div>
+                <div class="modal-info-item">
+                  <span class="modal-info-label">Próx. Troca Correia</span>
+                  <span class="modal-info-value proxima-manutencao" :class="'status-' + statusProximaManutencao(veiculoDetalhes.dataProximaCorreiraDentada)">
+                    <span v-if="statusProximaManutencao(veiculoDetalhes.dataProximaCorreiraDentada) === 'vencida'" class="status-dot dot-vencida"></span>
+                    <span v-else-if="statusProximaManutencao(veiculoDetalhes.dataProximaCorreiraDentada) === 'alerta'" class="status-dot dot-alerta"></span>
+                    <span v-else-if="statusProximaManutencao(veiculoDetalhes.dataProximaCorreiraDentada) === 'ok'" class="status-dot dot-ok"></span>
+                    {{ formatarData(veiculoDetalhes.dataProximaCorreiraDentada) }}
                   </span>
                 </div>
               </div>

@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -16,6 +18,8 @@ public class VeiculoDTOResponse {
     private String cor;
     private String anoDeFabricacao;
     private Long kilometragemAtual;
+    private LocalDate dataProximaTrocaOleo;
+    private LocalDate dataProximaCorreiraDentada;
     private String frota;
     private String tipoVeiculo;
     private BaseDTOResponse base;

@@ -4,6 +4,7 @@ import br.com.novotriunfo.frotas.entity.enums.TipoVeiculo;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +31,8 @@ public class Veiculo {
     private String motivoInativacao;
 
     private Long  kilometragemAtual = 0L;
+    private LocalDate dataProximaTrocaOleo;
+    private LocalDate dataProximaCorreiraDentada;
 
     @Enumerated(EnumType.STRING)
     private TipoVeiculo tipoVeiculo;

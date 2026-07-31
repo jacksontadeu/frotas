@@ -60,6 +60,8 @@ public class VeiculoService {
             response.setNome(veiculo.getNome());
             response.setFrota(veiculo.getFrota());
             response.setKilometragemAtual(veiculo.getKilometragemAtual());
+            response.setDataProximaTrocaOleo(veiculo.getDataProximaTrocaOleo());
+            response.setDataProximaCorreiraDentada(veiculo.getDataProximaCorreiraDentada());
             return response;
         }).collect(Collectors.toList());
     }

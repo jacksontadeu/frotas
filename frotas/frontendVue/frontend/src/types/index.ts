@@ -70,6 +70,8 @@ export interface VeiculoResponse {
   frota: string
   tipoVeiculo: TipoVeiculo
   kilometragemAtual: number | null
+  dataProximaTrocaOleo: string | null
+  dataProximaCorreiraDentada: string | null
   base: BaseResponse
 }
 
