@@ -114,6 +114,39 @@ function fecharModal() {
   showModal.value = false
 }
 
+// ── Modal de Detalhes do Veículo ─────────────────────────────────────────────
+const veiculoDetalhes = ref<VeiculoResponse | null>(null)
+
+function abrirDetalhes(veiculo: VeiculoResponse) {
+  veiculoDetalhes.value = veiculo
+}
+
+function fecharDetalhes() {
+  veiculoDetalhes.value = null
+}
+
+function imprimirDetalhes() {
+  document.body.classList.add('printing-modal-active')
+  window.print()
+  document.body.classList.remove('printing-modal-active')
+}
+
+const manutencoesDoVeiculoSelecionado = computed(() => {
+  if (!veiculoDetalhes.value) return []
+  return manutencoes.value
+    .filter((m) => m.veiculo.id === veiculoDetalhes.value!.id)
+    .sort((a, b) => (b.dataAgendamento ?? '').localeCompare(a.dataAgendamento ?? ''))
+})
+
+const formatarTipoManutencao = (tipo: string) => {
+  const map: Record<string, string> = {
+    PREVENTIVA_TROCA_DE_OLEO: 'Prev. - Troca de Óleo',
+    PREVENTIVA_KIT_CORREIA_DENTADA: 'Prev. - Kit Correia',
+    CORRETIVA: 'Corretiva',
+  }
+  return map[tipo] || tipo
+}
+
 const router = useRouter()
 function navegarParaManutencao(veiculoId: number) {
   router.push({ name: 'cadastrar-manutencao', query: { veiculoId } })
@@ -361,7 +394,8 @@ onMounted(carregarVeiculos)
           <div
             v-for="veiculo in grupo.itens"
             :key="veiculo.id"
-            class="veiculo-card"
+            class="veiculo-card clickable"
+            @click="abrirDetalhes(veiculo)"
           >
             <div class="veiculo-card-stripe"></div>
 
@@ -438,21 +472,21 @@ onMounted(carregarVeiculos)
             <div class="veiculo-card-footer">
               <button
                 class="btn-card-action btn-card-manutencao"
-                @click="navegarParaManutencao(veiculo.id)"
+                @click.stop="navegarParaManutencao(veiculo.id)"
                 title="Registrar manutenção"
               >
                 🔧 Manutenção
               </button>
               <button
                 class="btn-card-action btn-card-km"
-                @click="abrirModalKm(veiculo)"
+                @click.stop="abrirModalKm(veiculo)"
                 title="Atualizar kilometragem"
               >
                 🛣️ KM
               </button>
               <button
                 class="btn-card-action btn-card-base"
-                @click="abrirModalBase(veiculo)"
+                @click.stop="abrirModalBase(veiculo)"
                 title="Trocar base"
               >
                 🏢 Base
@@ -460,7 +494,7 @@ onMounted(carregarVeiculos)
               <button
                 class="btn-card-action btn-card-delete"
                 :disabled="deletingId === veiculo.id"
-                @click="confirmarExclusao(veiculo.id, veiculo.nome)"
+                @click.stop="confirmarExclusao(veiculo.id, veiculo.nome)"
               >
                 {{ deletingId === veiculo.id ? '⏳' : '🗑️' }} Excluir
               </button>
@@ -483,7 +517,8 @@ onMounted(carregarVeiculos)
           <li
             v-for="veiculo in grupo.itens"
             :key="veiculo.id"
-            class="list-item"
+            class="list-item clickable"
+            @click="abrirDetalhes(veiculo)"
           >
             <div class="list-item-info">
               <h5>
@@ -512,26 +547,26 @@ onMounted(carregarVeiculos)
             <div class="list-item-actions">
               <button
                 class="btn btn-warning btn-sm"
-                @click="navegarParaManutencao(veiculo.id)"
+                @click.stop="navegarParaManutencao(veiculo.id)"
               >
                 🔧 Manutenção
               </button>
               <button
                 class="btn btn-km btn-sm"
-                @click="abrirModalKm(veiculo)"
+                @click.stop="abrirModalKm(veiculo)"
               >
                 🛣️ Atualizar KM
               </button>
               <button
                 class="btn btn-base btn-sm"
-                @click="abrirModalBase(veiculo)"
+                @click.stop="abrirModalBase(veiculo)"
               >
                 🏢 Trocar Base
               </button>
               <button
                 class="btn btn-danger btn-sm"
                 :disabled="deletingId === veiculo.id"
-                @click="confirmarExclusao(veiculo.id, veiculo.nome)"
+                @click.stop="confirmarExclusao(veiculo.id, veiculo.nome)"
               >
                 {{ deletingId === veiculo.id ? '⏳' : '🗑️' }} Excluir
               </button>
@@ -651,9 +686,194 @@ onMounted(carregarVeiculos)
       </div>
     </Transition>
   </Teleport>
+
+  <!-- ── Modal Detalhes do Veículo ── -->
+  <Teleport to="body">
+    <Transition name="modal-fade">
+      <div v-if="veiculoDetalhes" class="custom-modal-overlay printable-overlay" @click.self="fecharDetalhes">
+        <div class="custom-modal printable-modal" role="dialog" aria-modal="true">
+          <div class="custom-modal-header no-print">
+            <span class="custom-modal-icon">{{ tipoIcon[veiculoDetalhes.tipoVeiculo] ?? '🚙' }}</span>
+            <h2 class="custom-modal-title">Detalhes do Veículo</h2>
+            <button class="custom-modal-close" @click="fecharDetalhes">✕</button>
+          </div>
+          
+          <!-- Versão impressão do header (simplificada) -->
+          <div class="print-only" style="display: none; padding: 1.5rem; border-bottom: 2px solid #ddd;">
+            <h2 style="margin: 0; font-size: 1.5rem;">Detalhes do Veículo - <span class="placa-badge">{{ veiculoDetalhes.placaVeiculo }}</span></h2>
+          </div>
+
+          <div class="custom-modal-body">
+            <p class="custom-modal-subtitle no-print">
+              Visualizando detalhes completos de <strong>{{ veiculoDetalhes.nome }}</strong>.
+            </p>
+
+            <div class="modal-section">
+              <h4 class="modal-section-title">🚙 Informações Gerais</h4>
+              <div class="modal-grid-info">
+                <div class="modal-info-item">
+                  <span class="modal-info-label">Veículo / Modelo</span>
+                  <span class="modal-info-value">{{ veiculoDetalhes.nome }}</span>
+                </div>
+                <div class="modal-info-item">
+                  <span class="modal-info-label">Placa</span>
+                  <span class="modal-info-value"><span class="placa-badge">{{ veiculoDetalhes.placaVeiculo }}</span></span>
+                </div>
+                <div class="modal-info-item">
+                  <span class="modal-info-label">Frota</span>
+                  <span class="modal-info-value">{{ veiculoDetalhes.frota || '—' }}</span>
+                </div>
+                <div class="modal-info-item">
+                  <span class="modal-info-label">Cor</span>
+                  <span class="modal-info-value">{{ veiculoDetalhes.cor || '—' }}</span>
+                </div>
+                <div class="modal-info-item">
+                  <span class="modal-info-label">Ano</span>
+                  <span class="modal-info-value">{{ veiculoDetalhes.anoDeFabricacao || '—' }}</span>
+                </div>
+                <div class="modal-info-item">
+                  <span class="modal-info-label">Tipo</span>
+                  <span class="modal-info-value badge badge-purple" style="font-size: 0.75rem;">{{ veiculoDetalhes.tipoVeiculo }}</span>
+                </div>
+                <div class="modal-info-item">
+                  <span class="modal-info-label">Base Atual</span>
+                  <span class="modal-info-value">{{ veiculoDetalhes.base?.nome || 'Sem base definida' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-section" style="margin-top: 1.5rem;">
+              <h4 class="modal-section-title">🛣️ Desempenho e Manutenção</h4>
+              <div class="modal-grid-info">
+                <div class="modal-info-item">
+                  <span class="modal-info-label">Kilometragem Atual</span>
+                  <span class="modal-info-value" style="color: #38bdf8; font-weight: 700;">{{ formatarKm(veiculoDetalhes.kilometragemAtual) }}</span>
+                </div>
+                <div class="modal-info-item">
+                  <span class="modal-info-label">Próxima Manutenção</span>
+                  <span class="modal-info-value proxima-manutencao" :class="'status-' + statusProximaManutencao(getUltimaManutencao(veiculoDetalhes.id)?.dataProximaManutencao)">
+                    <span v-if="statusProximaManutencao(getUltimaManutencao(veiculoDetalhes.id)?.dataProximaManutencao) === 'vencida'" class="status-dot dot-vencida"></span>
+                    <span v-else-if="statusProximaManutencao(getUltimaManutencao(veiculoDetalhes.id)?.dataProximaManutencao) === 'alerta'" class="status-dot dot-alerta"></span>
+                    <span v-else-if="statusProximaManutencao(getUltimaManutencao(veiculoDetalhes.id)?.dataProximaManutencao) === 'ok'" class="status-dot dot-ok"></span>
+                    {{ formatarData(getUltimaManutencao(veiculoDetalhes.id)?.dataProximaManutencao) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-section" style="margin-top: 1.5rem;">
+              <h4 class="modal-section-title">🔧 Histórico de Manutenções</h4>
+              <div v-if="manutencoesDoVeiculoSelecionado.length > 0" class="manutencoes-historico-lista">
+                <div v-for="m in manutencoesDoVeiculoSelecionado" :key="m.id" class="historico-item">
+                  <div class="historico-item-header">
+                    <span class="badge" :class="m.tipoManutencao === 'CORRETIVA' ? 'badge-danger' : 'badge-purple'" style="font-size: 0.7rem;">
+                      {{ formatarTipoManutencao(m.tipoManutencao) }}
+                    </span>
+                    <span class="status-badge" :class="m.status === 'EM_ABERTO' ? 'status-open' : 'status-closed'" style="font-size: 0.7rem;">
+                      {{ m.status === 'EM_ABERTO' ? 'Em Aberto' : 'Finalizada' }}
+                    </span>
+                  </div>
+                  <div class="historico-item-body">
+                    <span class="historico-info">📅 Agendado: <strong>{{ formatarData(m.dataAgendamento) }}</strong></span>
+                    <span v-if="m.dataRealizacao" class="historico-info">✅ Realizado: <strong>{{ formatarData(m.dataRealizacao) }}</strong></span>
+                    <span class="historico-info">🛣️ KM: <strong>{{ m.kilometragem }} km</strong></span>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="text-muted" style="font-size: 0.85rem; margin-top: 0.5rem;">
+                Nenhuma manutenção registrada para este veículo.
+              </p>
+            </div>
+          </div>
+          <div class="custom-modal-footer no-print">
+            <button class="btn btn-secondary" @click="imprimirDetalhes">
+              🖨️ Imprimir
+            </button>
+            <button class="btn btn-primary" @click="fecharDetalhes">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
+/* ── Estilos do Modal de Detalhes ── */
+.modal-section-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.5rem;
+}
+
+.modal-grid-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+}
+
+.modal-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.modal-info-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.modal-info-value {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+/* ── Histórico de Manutenções ── */
+.manutencoes-historico-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.historico-item {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.historico-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.historico-item-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.historico-info strong {
+  color: var(--text-primary);
+}
+
 /* ── Layout ── */
 .page-header-row {
   display: flex;
@@ -1295,5 +1515,34 @@ onMounted(carregarVeiculos)
 .modal-fade-enter-from .custom-modal {
   transform: scale(0.92) translateY(12px);
   opacity: 0;
+}
+
+/* ── Estilos de Impressão ── */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .printable-modal, .printable-modal * {
+    visibility: visible;
+  }
+  .printable-modal {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: 100%;
+    box-shadow: none;
+    border: none;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .printable-overlay {
+    background: transparent;
+    position: static;
+  }
 }
 </style>
