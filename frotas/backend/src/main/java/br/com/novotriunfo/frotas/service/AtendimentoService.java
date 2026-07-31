@@ -60,7 +60,8 @@ public class AtendimentoService {
             veiculo.setKilometragemAtual(request.getKilometragem());
             manutencaoRepository.save(manutencao);
             veiculoRepository.save(veiculo);
-        }else{
+            cadastrarTrocaOleo(veiculo, request);
+        } else {
             Manutencao manutencao = manutencaoOpt.get();
             manutencao.setNumeroManutencao(manutencaoOpt.get().getNumeroManutencao());
             manutencao.setServicos(request.getServicos());
@@ -77,7 +78,30 @@ public class AtendimentoService {
             veiculo.setKilometragemAtual(request.getKilometragem());
             manutencaoRepository.save(manutencao);
             veiculoRepository.save(veiculo);
+            cadastrarTrocaOleo(veiculo, request);
 
         }
+    }
+
+    private void cadastrarTrocaOleo(Veiculo veiculo, AtendimentoDTORequest request) {
+        Manutencao manutencao = new Manutencao();
+        manutencao.setVeiculo(veiculo);
+        manutencao.setTipoManutencao(TipoManutencao.PREVENTIVA_TROCA_DE_OLEO);
+        manutencao.setDataAgendamento(request.getDataRealizacao().plusMonths(6));
+        manutencaoRepository.save(manutencao);
+        String numero = String.format("MAN-%04d", manutencao.getId());
+        manutencao.setNumeroManutencao(numero);
+        manutencaoRepository.save(manutencao);
+    }
+
+    private void cadastrarTrocaCorreiaDentada(Veiculo veiculo, AtendimentoDTORequest request) {
+        Manutencao manutencao = new Manutencao();
+        manutencao.setVeiculo(veiculo);
+        manutencao.setTipoManutencao(TipoManutencao.PREVENTIVA_KIT_CORREIA_DENTADA);
+        manutencao.setDataAgendamento(request.getDataRealizacao().plusMonths(24));
+        manutencaoRepository.save(manutencao);
+        String numero = String.format("MAN-%04d", manutencao.getId());
+        manutencao.setNumeroManutencao(numero);
+        manutencaoRepository.save(manutencao);
     }
 }
