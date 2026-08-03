@@ -23,22 +23,7 @@ const pendingDeleteNome = ref('')
 // ── Manutenções por veículo ──────────────────────────────────────────────────
 const manutencoes = ref<ManutencaoResponse[]>([])
 
-/** Retorna a manutenção mais recente (maior id) de cada veículo */
-const ultimaManutencaoPorVeiculo = computed(() => {
-  const mapa = new Map<number, ManutencaoResponse>()
-  for (const m of manutencoes.value) {
-    if (!m.veiculo?.id) continue
-    const existente = mapa.get(m.veiculo.id)
-    if (!existente || m.id > existente.id) {
-      mapa.set(m.veiculo.id, m)
-    }
-  }
-  return mapa
-})
 
-function getUltimaManutencao(veiculoId: number): ManutencaoResponse | undefined {
-  return ultimaManutencaoPorVeiculo.value.get(veiculoId)
-}
 
 const ultimaManutencaoOleoPorVeiculo = computed(() => {
   const mapa = new Map<number, ManutencaoResponse>()

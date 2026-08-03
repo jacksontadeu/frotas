@@ -35,8 +35,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/cadastros/cadastrar-base', label: 'Cadastrar Base' },
       { to: '/listagem/listar-bases', label: 'Listar Bases' },
-      { to: '/listagem/listar-bases', label: 'Alterar Base' },
-      { to: '/listagem/listar-bases', label: 'Excluir Base' },
+      
     ],
   },
   {
@@ -45,9 +44,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/cadastros/cadastrar-veiculo', label: 'Cadastrar Veículo' },
       { to: '/listagem/listar-veiculos', label: 'Listar Veículos' },
-      { to: '/veiculos/trocar-base', label: 'Trocar Veículo de Base' },
-      { to: '/listagem/listar-veiculos', label: 'Alterar Veículo' },
-      { to: '/listagem/listar-veiculos', label: 'Excluir Veículo' },
+      
     ],
   },
   {

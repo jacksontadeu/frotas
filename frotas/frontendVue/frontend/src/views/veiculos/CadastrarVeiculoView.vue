@@ -15,8 +15,8 @@ const form = ref<VeiculoDTORequest>({
   placaVeiculo: '',
   frota: '',
   base_id: null,
-  tipoVeiculo: '' as TipoVeiculo,
-  cor: '',
+  tipoVeiculo: '' as any,
+  cor: '' as any,
   anoDeFabricacao: null,
 })
 

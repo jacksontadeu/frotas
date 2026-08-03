@@ -112,16 +112,12 @@ export const TIPOS_MANUTENCAO = [
   { value: 'CORRETIVA', label: 'Corretiva' } as const,
 ]
 
-export enum Cor {
-  BRANCO = 'BRANCO',
-  PRATA = 'PRATA',
-  AZUL = 'AZUL',
-}
+export type Cor = 'BRANCO' | 'PRATA' | 'AZUL'
 
 export const CORES_VEICULO: Cor[] = [
-  Cor.BRANCO,
-  Cor.PRATA,
-  Cor.AZUL,
+  'BRANCO',
+  'PRATA',
+  'AZUL',
 ]
 
 export type Servico =

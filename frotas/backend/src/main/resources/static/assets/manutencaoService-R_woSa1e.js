@@ -1,0 +1,1 @@
+import{r as e}from"./index--3Yb_LVG.js";var t={async cadastrar(t){await e.post(`/manutencao`,t)},async listarTodas(){return(await e.get(`/manutencao`)).data},async listarAbertas(){return(await e.get(`/manutencao/status`,{params:{status:`EM_ABERTO`}})).data},async atender(t,n){await e.patch(`/atendimento/${t}`,n)}};export{t};

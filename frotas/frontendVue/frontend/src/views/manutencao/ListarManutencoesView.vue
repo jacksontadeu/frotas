@@ -127,7 +127,7 @@ const tipoIcon: Record<string, string> = {
   VAN: '🚐',
 }
 
-const formatarData = (dataStr?: string) => {
+const formatarData = (dataStr?: string | null) => {
   if (!dataStr) return ''
   const [ano, mes, dia] = dataStr.split('-')
   return `${dia}/${mes}/${ano}`
@@ -353,7 +353,7 @@ onMounted(carregarManutencoes)
             <!-- Checklist ou Descrição (apenas finalizadas) -->
             <div v-if="m.status === 'FINALIZADA'" class="card-checklist">
               <span class="checklist-summary-title">Serviços:</span>
-              <div v-if="m.tipoManutencao === 'CORRETIVA'" class="descricao-corretiva" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">
+              <div v-if="m.tipoManutencao === 'CORRETIVA'" class="descricao-corretiva" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">
                 {{ m.descricao || 'Nenhuma descrição informada.' }}
               </div>
               <div v-else-if="m.servicos && m.servicos.length > 0" class="checklist-pills">
@@ -409,7 +409,7 @@ onMounted(carregarManutencoes)
             <div v-if="m.status === 'FINALIZADA'" class="checklist-summary">
               <span class="checklist-summary-title">Serviços executados:</span>
               
-              <div v-if="m.tipoManutencao === 'CORRETIVA'" class="descricao-corretiva" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">
+              <div v-if="m.tipoManutencao === 'CORRETIVA'" class="descricao-corretiva" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">
                 {{ m.descricao || 'Nenhuma descrição informada.' }}
               </div>
               <div v-else class="checklist-pills">
@@ -497,12 +497,7 @@ onMounted(carregarManutencoes)
                   <span class="modal-label">Data de Realização</span>
                   <span class="modal-value">{{ formatarData(manutencaoSelecionada.dataRealizacao) || 'Pendente' }}</span>
                 </div>
-                <div>
-                  <span class="modal-label">Próxima Manutenção</span>
-                  <span class="modal-value" style="color: var(--color-success);">
-                    {{ formatarData(manutencaoSelecionada.dataProximaManutencao) || 'Não agendada' }}
-                  </span>
-                </div>
+                
               </div>
             </div>
 
