@@ -477,6 +477,8 @@ onMounted(carregarVeiculos)
                 </div>
               </div>
 
+
+
               <!-- Últ. Óleo -->
               <div class="info-row">
                 <span class="info-icon">🛢️</span>
@@ -510,7 +512,7 @@ onMounted(carregarVeiculos)
                   >
                     <span v-if="statusProximaManutencao(veiculo.dataProximaTrocaOleo) !== 'sem-info'"
                       class="status-dot" :class="'dot-' + statusProximaManutencao(veiculo.dataProximaTrocaOleo)"></span>
-                    {{ formatarData(veiculo.dataProximaTrocaOleo) }}
+                    {{ formatarData(veiculo.dataProximaTrocaOleo) }} <span style="color: var(--text-muted); font-size: 0.85em; margin-left: 0.3rem;">({{ formatarKm(veiculo.kmTrocaOleo) }})</span>
                   </span>
                 </div>
               </div>
@@ -526,7 +528,7 @@ onMounted(carregarVeiculos)
                   >
                     <span v-if="statusProximaManutencao(veiculo.dataProximaCorreiraDentada) !== 'sem-info'"
                       class="status-dot" :class="'dot-' + statusProximaManutencao(veiculo.dataProximaCorreiraDentada)"></span>
-                    {{ formatarData(veiculo.dataProximaCorreiraDentada) }}
+                    {{ formatarData(veiculo.dataProximaCorreiraDentada) }} <span style="color: var(--text-muted); font-size: 0.85em; margin-left: 0.3rem;">({{ formatarKm(veiculo.kmTrocaCorreiraDentada) }})</span>
                   </span>
                 </div>
               </div>
@@ -595,6 +597,7 @@ onMounted(carregarVeiculos)
                 <span>🎨 Cor: {{ veiculo.cor }}</span>
                 <span>📅 Ano: {{ veiculo.anoDeFabricacao }}</span>
                 <span>🛣️ KM: <strong>{{ formatarKm(veiculo.kilometragemAtual) }}</strong></span>
+
                 <span>🛢️ Últ. Óleo: <strong>{{ formatarData(getUltimaDataRealizada(getUltimaManutencaoOleo(veiculo.id))) }}</strong></span>
                 <span>⚙️ Últ. Correia: <strong>{{ formatarData(getUltimaDataRealizada(getUltimaManutencaoCorreia(veiculo.id))) }}</strong></span>
                 <span
@@ -602,14 +605,14 @@ onMounted(carregarVeiculos)
                 >
                   <span v-if="statusProximaManutencao(veiculo.dataProximaTrocaOleo) !== 'sem-info'"
                     class="status-dot" :class="'dot-' + statusProximaManutencao(veiculo.dataProximaTrocaOleo)"></span>
-                  🛢️ Próx. Óleo: <strong>{{ formatarData(veiculo.dataProximaTrocaOleo) }}</strong>
+                  🛢️ Próx. Óleo: <strong>{{ formatarData(veiculo.dataProximaTrocaOleo) }} ({{ formatarKm(veiculo.kmTrocaOleo) }})</strong>
                 </span>
                 <span
                   :class="'list-proxima status-' + statusProximaManutencao(veiculo.dataProximaCorreiraDentada)"
                 >
                   <span v-if="statusProximaManutencao(veiculo.dataProximaCorreiraDentada) !== 'sem-info'"
                     class="status-dot" :class="'dot-' + statusProximaManutencao(veiculo.dataProximaCorreiraDentada)"></span>
-                  ⚙️ Próx. Correia: <strong>{{ formatarData(veiculo.dataProximaCorreiraDentada) }}</strong>
+                  ⚙️ Próx. Correia: <strong>{{ formatarData(veiculo.dataProximaCorreiraDentada) }} ({{ formatarKm(veiculo.kmTrocaCorreiraDentada) }})</strong>
                 </span>
               </p>
             </div>
@@ -801,6 +804,11 @@ onMounted(carregarVeiculos)
                   <span class="modal-info-value">{{ veiculoDetalhes.anoDeFabricacao || '—' }}</span>
                 </div>
                 <div class="modal-info-item">
+                  <span class="modal-info-label">KM Atual</span>
+                  <span class="modal-info-value">{{ formatarKm(veiculoDetalhes.kilometragemAtual) }}</span>
+                </div>
+
+                <div class="modal-info-item">
                   <span class="modal-info-label">Tipo</span>
                   <span class="modal-info-value badge badge-purple" style="font-size: 0.75rem;">{{ veiculoDetalhes.tipoVeiculo }}</span>
                 </div>
@@ -836,7 +844,7 @@ onMounted(carregarVeiculos)
                     <span v-if="statusProximaManutencao(veiculoDetalhes.dataProximaTrocaOleo) === 'vencida'" class="status-dot dot-vencida"></span>
                     <span v-else-if="statusProximaManutencao(veiculoDetalhes.dataProximaTrocaOleo) === 'alerta'" class="status-dot dot-alerta"></span>
                     <span v-else-if="statusProximaManutencao(veiculoDetalhes.dataProximaTrocaOleo) === 'ok'" class="status-dot dot-ok"></span>
-                    {{ formatarData(veiculoDetalhes.dataProximaTrocaOleo) }}
+                    {{ formatarData(veiculoDetalhes.dataProximaTrocaOleo) }} <span style="color: var(--text-muted); font-size: 0.85em; margin-left: 0.3rem;">({{ formatarKm(veiculoDetalhes.kmTrocaOleo) }})</span>
                   </span>
                 </div>
                 <div class="modal-info-item">
@@ -845,7 +853,7 @@ onMounted(carregarVeiculos)
                     <span v-if="statusProximaManutencao(veiculoDetalhes.dataProximaCorreiraDentada) === 'vencida'" class="status-dot dot-vencida"></span>
                     <span v-else-if="statusProximaManutencao(veiculoDetalhes.dataProximaCorreiraDentada) === 'alerta'" class="status-dot dot-alerta"></span>
                     <span v-else-if="statusProximaManutencao(veiculoDetalhes.dataProximaCorreiraDentada) === 'ok'" class="status-dot dot-ok"></span>
-                    {{ formatarData(veiculoDetalhes.dataProximaCorreiraDentada) }}
+                    {{ formatarData(veiculoDetalhes.dataProximaCorreiraDentada) }} <span style="color: var(--text-muted); font-size: 0.85em; margin-left: 0.3rem;">({{ formatarKm(veiculoDetalhes.kmTrocaCorreiraDentada) }})</span>
                   </span>
                 </div>
               </div>

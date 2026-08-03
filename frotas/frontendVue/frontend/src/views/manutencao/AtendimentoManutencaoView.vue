@@ -306,8 +306,8 @@ onMounted(carregarManutencoes)
             <span class="badge" :class="m.tipoManutencao?.toUpperCase() === 'CORRETIVA' ? 'badge-danger' : 'badge-purple'">
               {{ formatarTipo(m.tipoManutencao) }}
             </span>
-            <span class="header-km">📍 {{ m.kilometragem }} Km</span>
-            <span class="header-date">📅 {{ formatarData(m.dataRealizacao) }}</span>
+           
+            <span class="header-date" title="Data de Agendamento">📅 Data de Agendamento: {{ formatarData(m.dataAgendamento) }}</span>
             <span class="chevron-icon" :class="{ rotated: expandedId === m.id }">
               ▼
             </span>

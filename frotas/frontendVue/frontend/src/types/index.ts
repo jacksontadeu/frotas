@@ -68,6 +68,8 @@ export interface VeiculoResponse {
   placaVeiculo: string
   anoDeFabricacao: string
   frota: string
+  kmTrocaOleo: number | null
+  kmTrocaCorreiraDentada: number | null
   tipoVeiculo: TipoVeiculo
   kilometragemAtual: number | null
   dataProximaTrocaOleo: string | null

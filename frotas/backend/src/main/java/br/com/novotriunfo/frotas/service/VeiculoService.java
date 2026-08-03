@@ -56,12 +56,15 @@ public class VeiculoService {
             response.setBase(modelMapper.map(veiculo.getBase(), BaseDTOResponse.class));
             response.setTipoVeiculo(String.valueOf(veiculo.getTipoVeiculo()));
             response.setCor(veiculo.getCor());
+            
             response.setAnoDeFabricacao(String.valueOf(veiculo.getAnoDeFabricacao()));
             response.setNome(veiculo.getNome());
             response.setFrota(veiculo.getFrota());
             response.setKilometragemAtual(veiculo.getKilometragemAtual());
             response.setDataProximaTrocaOleo(veiculo.getDataProximaTrocaOleo());
             response.setDataProximaCorreiraDentada(veiculo.getDataProximaCorreiraDentada());
+            response.setKmTrocaOleo(veiculo.getKmTrocaOleo());
+            response.setKmTrocaCorreiraDentada(veiculo.getKmTrocaCorreiraDentada());
             return response;
         }).collect(Collectors.toList());
     }

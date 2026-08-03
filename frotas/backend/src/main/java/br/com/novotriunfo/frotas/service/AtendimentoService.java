@@ -58,6 +58,7 @@ public class AtendimentoService {
             }
             veiculo.setDataProximaTrocaOleo(request.getDataRealizacao().plusMonths(6));
             veiculo.setKilometragemAtual(request.getKilometragem());
+            veiculo.setKmTrocaOleo(request.getKilometragem() + 10000L);
             manutencaoRepository.save(manutencao);
             veiculoRepository.save(veiculo);
             cadastrarTrocaOleo(veiculo, request);
@@ -76,6 +77,7 @@ public class AtendimentoService {
             veiculo.setDataProximaTrocaOleo(request.getDataRealizacao().plusMonths(6));
             veiculo.setDataProximaCorreiraDentada(request.getDataRealizacao().plusMonths(24));
             veiculo.setKilometragemAtual(request.getKilometragem());
+            veiculo.setKmTrocaCorreiraDentada(request.getKilometragem() + 50000L);
             manutencaoRepository.save(manutencao);
             veiculoRepository.save(veiculo);
             cadastrarTrocaOleo(veiculo, request);
@@ -88,6 +90,7 @@ public class AtendimentoService {
         manutencao.setVeiculo(veiculo);
         manutencao.setTipoManutencao(TipoManutencao.PREVENTIVA_TROCA_DE_OLEO);
         manutencao.setDataAgendamento(request.getDataRealizacao().plusMonths(6));
+
         manutencaoRepository.save(manutencao);
         String numero = String.format("MAN-%04d", manutencao.getId());
         manutencao.setNumeroManutencao(numero);
@@ -99,6 +102,7 @@ public class AtendimentoService {
         manutencao.setVeiculo(veiculo);
         manutencao.setTipoManutencao(TipoManutencao.PREVENTIVA_KIT_CORREIA_DENTADA);
         manutencao.setDataAgendamento(request.getDataRealizacao().plusMonths(24));
+
         manutencaoRepository.save(manutencao);
         String numero = String.format("MAN-%04d", manutencao.getId());
         manutencao.setNumeroManutencao(numero);

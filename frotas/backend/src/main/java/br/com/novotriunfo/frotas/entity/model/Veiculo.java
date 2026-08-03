@@ -32,6 +32,8 @@ public class Veiculo {
 
     private Long  kilometragemAtual = 0L;
     private LocalDate dataProximaTrocaOleo;
+    private Long kmTrocaOleo= 0L;
+    private Long kmTrocaCorreiraDentada= 0L;
     private LocalDate dataProximaCorreiraDentada;
 
     @Enumerated(EnumType.STRING)

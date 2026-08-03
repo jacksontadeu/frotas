@@ -18,6 +18,8 @@ public class VeiculoDTOResponse {
     private String cor;
     private String anoDeFabricacao;
     private Long kilometragemAtual;
+    private Long kmTrocaOleo;
+    private Long kmTrocaCorreiraDentada;
     private LocalDate dataProximaTrocaOleo;
     private LocalDate dataProximaCorreiraDentada;
     private String frota;

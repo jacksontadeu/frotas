@@ -350,10 +350,13 @@ onMounted(carregarManutencoes)
               </div>
             </div>
 
-            <!-- Checklist (apenas finalizadas) -->
-            <div v-if="m.status === 'FINALIZADA' && m.servicos && m.servicos.length > 0" class="card-checklist">
+            <!-- Checklist ou Descrição (apenas finalizadas) -->
+            <div v-if="m.status === 'FINALIZADA'" class="card-checklist">
               <span class="checklist-summary-title">Serviços:</span>
-              <div class="checklist-pills">
+              <div v-if="m.tipoManutencao === 'CORRETIVA'" class="descricao-corretiva" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">
+                {{ m.descricao || 'Nenhuma descrição informada.' }}
+              </div>
+              <div v-else-if="m.servicos && m.servicos.length > 0" class="checklist-pills">
                 <span v-for="s in m.servicos" :key="s" class="checklist-pill">
                   {{ getServicoInfo(s)?.icon }} {{ getServicoInfo(s)?.label || s }}
                 </span>
@@ -405,7 +408,11 @@ onMounted(carregarManutencoes)
 
             <div v-if="m.status === 'FINALIZADA'" class="checklist-summary">
               <span class="checklist-summary-title">Serviços executados:</span>
-              <div class="checklist-pills">
+              
+              <div v-if="m.tipoManutencao === 'CORRETIVA'" class="descricao-corretiva" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">
+                {{ m.descricao || 'Nenhuma descrição informada.' }}
+              </div>
+              <div v-else class="checklist-pills">
                 <span v-for="s in m.servicos" :key="s" class="checklist-pill">
                   {{ getServicoInfo(s)?.icon }} {{ getServicoInfo(s)?.label || s }}
                 </span>
@@ -502,7 +509,11 @@ onMounted(carregarManutencoes)
             <!-- Serviços Executados -->
             <div class="modal-section">
               <h4 class="modal-section-title">📋 Serviços Executados</h4>
-              <div v-if="manutencaoSelecionada.servicos && manutencaoSelecionada.servicos.length > 0" class="checklist-pills">
+              
+              <div v-if="manutencaoSelecionada.tipoManutencao === 'CORRETIVA'" class="descricao-corretiva-modal" style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap;">
+                {{ manutencaoSelecionada.descricao || 'Nenhuma descrição informada.' }}
+              </div>
+              <div v-else-if="manutencaoSelecionada.servicos && manutencaoSelecionada.servicos.length > 0" class="checklist-pills">
                 <span v-for="s in manutencaoSelecionada.servicos" :key="s" class="checklist-pill">
                   {{ getServicoInfo(s)?.icon }} {{ getServicoInfo(s)?.label || s }}
                 </span>
