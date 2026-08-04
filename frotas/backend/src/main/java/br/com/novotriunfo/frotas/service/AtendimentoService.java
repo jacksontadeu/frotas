@@ -80,7 +80,7 @@ public class AtendimentoService {
             veiculo.setKmTrocaCorreiraDentada(request.getKilometragem() + 50000L);
             manutencaoRepository.save(manutencao);
             veiculoRepository.save(veiculo);
-            cadastrarTrocaOleo(veiculo, request);
+            cadastrarTrocaCorreiaDentada(veiculo, request);
 
         }
     }
