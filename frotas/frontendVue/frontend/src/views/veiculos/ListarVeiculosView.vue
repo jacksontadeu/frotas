@@ -25,36 +25,6 @@ const manutencoes = ref<ManutencaoResponse[]>([])
 
 
 
-const ultimaManutencaoOleoPorVeiculo = computed(() => {
-  const mapa = new Map<number, ManutencaoResponse>()
-  for (const m of manutencoes.value) {
-    if (!m.veiculo?.id || m.tipoManutencao !== 'PREVENTIVA_TROCA_DE_OLEO') continue
-    const existente = mapa.get(m.veiculo.id)
-    if (!existente || m.id > existente.id) {
-      mapa.set(m.veiculo.id, m)
-    }
-  }
-  return mapa
-})
-function getUltimaManutencaoOleo(veiculoId: number): ManutencaoResponse | undefined {
-  return ultimaManutencaoOleoPorVeiculo.value.get(veiculoId)
-}
-
-const ultimaManutencaoCorreiaPorVeiculo = computed(() => {
-  const mapa = new Map<number, ManutencaoResponse>()
-  for (const m of manutencoes.value) {
-    if (!m.veiculo?.id || m.tipoManutencao !== 'PREVENTIVA_KIT_CORREIA_DENTADA') continue
-    const existente = mapa.get(m.veiculo.id)
-    if (!existente || m.id > existente.id) {
-      mapa.set(m.veiculo.id, m)
-    }
-  }
-  return mapa
-})
-function getUltimaManutencaoCorreia(veiculoId: number): ManutencaoResponse | undefined {
-  return ultimaManutencaoCorreiaPorVeiculo.value.get(veiculoId)
-}
-
 function formatarKm(km: number | null | undefined): string {
   if (km == null) return '—'
   return km.toLocaleString('pt-BR') + ' km'
@@ -79,10 +49,7 @@ function statusProximaManutencao(data: string | null | undefined): StatusManuten
   return 'ok'
 }
 
-function getUltimaDataRealizada(m: ManutencaoResponse | undefined): string | null | undefined {
-  if (!m) return null
-  return m.dataRealizacao || m.dataAgendamento || null
-}
+
 
 async function carregarVeiculos() {
   try {
@@ -268,18 +235,36 @@ function setViewMode(mode: ViewMode) {
 // ── Busca (placa / frota) ────────────────────────────────────────────────────
 const buscaQuery = ref('')
 
-// ── Ordenação dos grupos de base ────────────────────────────────────────────
-type Ordenacao = 'base_asc' | 'base_desc'
-const ordenacao = ref<Ordenacao>('base_asc')
+// ── Filtro por Base ─────────────────────────────────────────────────────────
+const basesDisponiveisFiltro = computed(() => {
+  const nomes = new Set<string>()
+  veiculos.value.forEach(v => {
+    if (v.base?.nome) nomes.add(v.base.nome)
+  })
+  return Array.from(nomes).sort()
+})
+const filtroBase = ref<string>('todas')
 
 const veiculosFiltrados = computed(() => {
-  if (!buscaQuery.value.trim()) return veiculos.value
-  const q = buscaQuery.value.trim().toLowerCase()
-  return veiculos.value.filter(
-    (v) =>
-      v.placaVeiculo?.toLowerCase().includes(q) ||
-      v.frota?.toLowerCase().includes(q)
-  )
+  let resultado = veiculos.value
+
+  if (filtroBase.value !== 'todas') {
+    if (filtroBase.value === 'sem-base') {
+      resultado = resultado.filter(v => !v.base?.nome)
+    } else {
+      resultado = resultado.filter(v => v.base?.nome === filtroBase.value)
+    }
+  }
+
+  if (buscaQuery.value.trim()) {
+    const q = buscaQuery.value.trim().toLowerCase()
+    resultado = resultado.filter(
+      (v) =>
+        v.placaVeiculo?.toLowerCase().includes(q) ||
+        v.frota?.toLowerCase().includes(q)
+    )
+  }
+  return resultado
 })
 
 // ── Veículos agrupados por base ──────────────────────────────────────────────
@@ -294,11 +279,7 @@ const gruposPorBase = computed(() => {
     lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
   }
   const grupos = Array.from(mapa.entries()).map(([base, itens]) => ({ base, itens }))
-  grupos.sort((a, b) =>
-    ordenacao.value === 'base_desc'
-      ? b.base.localeCompare(a.base, 'pt-BR')
-      : a.base.localeCompare(b.base, 'pt-BR')
-  )
+  grupos.sort((a, b) => a.base.localeCompare(b.base, 'pt-BR'))
   return grupos
 })
 
@@ -349,7 +330,7 @@ onMounted(carregarVeiculos)
       </div>
     </div>
 
-    <!-- Filtros: busca por placa/frota + ordenação por base -->
+    <!-- Filtros: busca por placa/frota + filtro por base -->
     <div v-if="!loading && !error && veiculos.length > 0" class="filtros-bar">
       <div class="busca-wrap">
         <span class="busca-icon">🔍</span>
@@ -368,10 +349,11 @@ onMounted(carregarVeiculos)
       </div>
 
       <div class="ordenacao-wrap">
-        <label class="ordenacao-label" for="ordenacao">Ordenar bases</label>
-        <select id="ordenacao" v-model="ordenacao" class="form-control">
-          <option value="base_asc">Base (A-Z)</option>
-          <option value="base_desc">Base (Z-A)</option>
+        <label class="ordenacao-label" for="filtro-base">Filtrar por Base</label>
+        <select id="filtro-base" v-model="filtroBase" class="form-control">
+          <option value="todas">Todas as bases</option>
+          <option v-for="baseNome in basesDisponiveisFiltro" :key="baseNome" :value="baseNome">{{ baseNome }}</option>
+          
         </select>
       </div>
     </div>
@@ -462,15 +444,13 @@ onMounted(carregarVeiculos)
                 </div>
               </div>
 
-
-
               <!-- Últ. Óleo -->
               <div class="info-row">
                 <span class="info-icon">🛢️</span>
                 <div class="info-text">
                   <span class="info-label">Últ. Troca Óleo</span>
                   <span class="info-value">
-                    {{ formatarData(getUltimaDataRealizada(getUltimaManutencaoOleo(veiculo.id))) }}
+                    {{ formatarData(veiculo.dataUltimaTrocaOleo) }}
                   </span>
                 </div>
               </div>
@@ -481,7 +461,19 @@ onMounted(carregarVeiculos)
                 <div class="info-text">
                   <span class="info-label">Últ. Troca Correia</span>
                   <span class="info-value">
-                    {{ formatarData(getUltimaDataRealizada(getUltimaManutencaoCorreia(veiculo.id))) }}
+                    {{ formatarData(veiculo.dataUltimaCorreiaDentada) }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Últ. Corretiva -->
+              <div class="info-row">
+                <span class="info-icon">🔧</span>
+                <div class="info-text">
+                  <span class="info-label">Últ. Corretiva</span>
+                  <span class="info-value">
+                    {{ formatarData(veiculo.dataUltimaCorretiva) }}
+                    <span style="color: var(--text-muted); font-size: 0.85em; margin-left: 0.3rem;">({{ formatarKm(veiculo.kmCorretiva) }})</span>
                   </span>
                 </div>
               </div>
@@ -509,11 +501,11 @@ onMounted(carregarVeiculos)
                   <span class="info-label">Próx. Troca Correia</span>
                   <span
                     class="info-value proxima-manutencao"
-                    :class="'status-' + statusProximaManutencao(veiculo.dataProximaCorreiraDentada)"
+                    :class="'status-' + statusProximaManutencao(veiculo.dataProximaCorreiaDentada)"
                   >
-                    <span v-if="statusProximaManutencao(veiculo.dataProximaCorreiraDentada) !== 'sem-info'"
-                      class="status-dot" :class="'dot-' + statusProximaManutencao(veiculo.dataProximaCorreiraDentada)"></span>
-                    {{ formatarData(veiculo.dataProximaCorreiraDentada) }} <span style="color: var(--text-muted); font-size: 0.85em; margin-left: 0.3rem;">({{ formatarKm(veiculo.kmTrocaCorreiraDentada) }})</span>
+                    <span v-if="statusProximaManutencao(veiculo.dataProximaCorreiaDentada) !== 'sem-info'"
+                      class="status-dot" :class="'dot-' + statusProximaManutencao(veiculo.dataProximaCorreiaDentada)"></span>
+                    {{ formatarData(veiculo.dataProximaCorreiaDentada) }} <span style="color: var(--text-muted); font-size: 0.85em; margin-left: 0.3rem;">({{ formatarKm(veiculo.kmTrocaCorreiaDentada) }})</span>
                   </span>
                 </div>
               </div>
@@ -583,8 +575,9 @@ onMounted(carregarVeiculos)
                 <span>📅 Ano: {{ veiculo.anoDeFabricacao }}</span>
                 <span>🛣️ KM: <strong>{{ formatarKm(veiculo.kilometragemAtual) }}</strong></span>
 
-                <span>🛢️ Últ. Óleo: <strong>{{ formatarData(getUltimaDataRealizada(getUltimaManutencaoOleo(veiculo.id))) }}</strong></span>
-                <span>⚙️ Últ. Correia: <strong>{{ formatarData(getUltimaDataRealizada(getUltimaManutencaoCorreia(veiculo.id))) }}</strong></span>
+                <span>🛢️ Últ. Óleo: <strong>{{ formatarData(veiculo.dataUltimaTrocaOleo) }}</strong></span>
+                <span>⚙️ Últ. Correia: <strong>{{ formatarData(veiculo.dataUltimaCorreiaDentada) }}</strong></span>
+                <span>🔧 Últ. Corretiva: <strong>{{ formatarData(veiculo.dataUltimaCorretiva) }} ({{ formatarKm(veiculo.kmCorretiva) }})</strong></span>
                 <span
                   :class="'list-proxima status-' + statusProximaManutencao(veiculo.dataProximaTrocaOleo)"
                 >
@@ -593,11 +586,11 @@ onMounted(carregarVeiculos)
                   🛢️ Próx. Óleo: <strong>{{ formatarData(veiculo.dataProximaTrocaOleo) }} ({{ formatarKm(veiculo.kmTrocaOleo) }})</strong>
                 </span>
                 <span
-                  :class="'list-proxima status-' + statusProximaManutencao(veiculo.dataProximaCorreiraDentada)"
+                  :class="'list-proxima status-' + statusProximaManutencao(veiculo.dataProximaCorreiaDentada)"
                 >
-                  <span v-if="statusProximaManutencao(veiculo.dataProximaCorreiraDentada) !== 'sem-info'"
-                    class="status-dot" :class="'dot-' + statusProximaManutencao(veiculo.dataProximaCorreiraDentada)"></span>
-                  ⚙️ Próx. Correia: <strong>{{ formatarData(veiculo.dataProximaCorreiraDentada) }} ({{ formatarKm(veiculo.kmTrocaCorreiraDentada) }})</strong>
+                  <span v-if="statusProximaManutencao(veiculo.dataProximaCorreiaDentada) !== 'sem-info'"
+                    class="status-dot" :class="'dot-' + statusProximaManutencao(veiculo.dataProximaCorreiaDentada)"></span>
+                  ⚙️ Próx. Correia: <strong>{{ formatarData(veiculo.dataProximaCorreiaDentada) }} ({{ formatarKm(veiculo.kmTrocaCorreiaDentada) }})</strong>
                 </span>
               </p>
             </div>
@@ -754,7 +747,7 @@ onMounted(carregarVeiculos)
             <h2 class="custom-modal-title">Detalhes do Veículo</h2>
             <button class="custom-modal-close" @click="fecharDetalhes">✕</button>
           </div>
-          
+
           <!-- Versão impressão do header (simplificada) -->
           <div class="print-only" style="display: none; padding: 1.5rem; border-bottom: 2px solid #ddd;">
             <h2 style="margin: 0; font-size: 1.5rem;">Detalhes do Veículo - <span class="placa-badge">{{ veiculoDetalhes.placaVeiculo }}</span></h2>
@@ -814,13 +807,20 @@ onMounted(carregarVeiculos)
                 <div class="modal-info-item">
                   <span class="modal-info-label">Últ. Troca Óleo</span>
                   <span class="modal-info-value">
-                    {{ formatarData(getUltimaDataRealizada(getUltimaManutencaoOleo(veiculoDetalhes.id))) }}
+                    {{ formatarData(veiculoDetalhes.dataUltimaTrocaOleo) }}
                   </span>
                 </div>
                 <div class="modal-info-item">
                   <span class="modal-info-label">Últ. Troca Correia</span>
                   <span class="modal-info-value">
-                    {{ formatarData(getUltimaDataRealizada(getUltimaManutencaoCorreia(veiculoDetalhes.id))) }}
+                    {{ formatarData(veiculoDetalhes.dataUltimaCorreiaDentada) }}
+                  </span>
+                </div>
+                <div class="modal-info-item">
+                  <span class="modal-info-label">Últ. Corretiva</span>
+                  <span class="modal-info-value">
+                    {{ formatarData(veiculoDetalhes.dataUltimaCorretiva) }}
+                    <span style="color: var(--text-muted); font-size: 0.85em; margin-left: 0.3rem;">({{ formatarKm(veiculoDetalhes.kmCorretiva) }})</span>
                   </span>
                 </div>
                 <div class="modal-info-item">
@@ -834,11 +834,11 @@ onMounted(carregarVeiculos)
                 </div>
                 <div class="modal-info-item">
                   <span class="modal-info-label">Próx. Troca Correia</span>
-                  <span class="modal-info-value proxima-manutencao" :class="'status-' + statusProximaManutencao(veiculoDetalhes.dataProximaCorreiraDentada)">
-                    <span v-if="statusProximaManutencao(veiculoDetalhes.dataProximaCorreiraDentada) === 'vencida'" class="status-dot dot-vencida"></span>
-                    <span v-else-if="statusProximaManutencao(veiculoDetalhes.dataProximaCorreiraDentada) === 'alerta'" class="status-dot dot-alerta"></span>
-                    <span v-else-if="statusProximaManutencao(veiculoDetalhes.dataProximaCorreiraDentada) === 'ok'" class="status-dot dot-ok"></span>
-                    {{ formatarData(veiculoDetalhes.dataProximaCorreiraDentada) }} <span style="color: var(--text-muted); font-size: 0.85em; margin-left: 0.3rem;">({{ formatarKm(veiculoDetalhes.kmTrocaCorreiraDentada) }})</span>
+                  <span class="modal-info-value proxima-manutencao" :class="'status-' + statusProximaManutencao(veiculoDetalhes.dataProximaCorreiaDentada)">
+                    <span v-if="statusProximaManutencao(veiculoDetalhes.dataProximaCorreiaDentada) === 'vencida'" class="status-dot dot-vencida"></span>
+                    <span v-else-if="statusProximaManutencao(veiculoDetalhes.dataProximaCorreiaDentada) === 'alerta'" class="status-dot dot-alerta"></span>
+                    <span v-else-if="statusProximaManutencao(veiculoDetalhes.dataProximaCorreiaDentada) === 'ok'" class="status-dot dot-ok"></span>
+                    {{ formatarData(veiculoDetalhes.dataProximaCorreiaDentada) }} <span style="color: var(--text-muted); font-size: 0.85em; margin-left: 0.3rem;">({{ formatarKm(veiculoDetalhes.kmTrocaCorreiaDentada) }})</span>
                   </span>
                 </div>
               </div>

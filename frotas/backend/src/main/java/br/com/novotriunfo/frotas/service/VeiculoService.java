@@ -9,6 +9,7 @@ import br.com.novotriunfo.frotas.entity.model.Veiculo;
 import br.com.novotriunfo.frotas.repository.BaseRepository;
 import br.com.novotriunfo.frotas.repository.VeiculoRepository;
 import org.modelmapper.ModelMapper;
+import org.modelmapper.TypeToken;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -49,24 +50,9 @@ public class VeiculoService {
 
     public List<VeiculoDTOResponse> listarTodos() {
         List<Veiculo> veiculos = veiculoRepository.findAll();
-        return veiculos.stream().map(veiculo -> {
-            VeiculoDTOResponse response = new VeiculoDTOResponse();
-            response.setId(veiculo.getId());
-            response.setPlacaVeiculo(veiculo.getPlacaVeiculo());
-            response.setBase(modelMapper.map(veiculo.getBase(), BaseDTOResponse.class));
-            response.setTipoVeiculo(String.valueOf(veiculo.getTipoVeiculo()));
-            response.setCor(veiculo.getCor());
-            
-            response.setAnoDeFabricacao(String.valueOf(veiculo.getAnoDeFabricacao()));
-            response.setNome(veiculo.getNome());
-            response.setFrota(veiculo.getFrota());
-            response.setKilometragemAtual(veiculo.getKilometragemAtual());
-            response.setDataProximaTrocaOleo(veiculo.getDataProximaTrocaOleo());
-            response.setDataProximaCorreiraDentada(veiculo.getDataProximaCorreiraDentada());
-            response.setKmTrocaOleo(veiculo.getKmTrocaOleo());
-            response.setKmTrocaCorreiraDentada(veiculo.getKmTrocaCorreiraDentada());
-            return response;
-        }).collect(Collectors.toList());
+        List<VeiculoDTOResponse> veiculosDTO = modelMapper.map(veiculos,
+                new TypeToken<List<VeiculoDTOResponse>>(){}.getType());
+        return veiculosDTO;
     }
 
     public VeiculoDTOResponse buscarPorId(Long id) {

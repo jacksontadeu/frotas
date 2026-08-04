@@ -25,16 +25,22 @@ public class Veiculo {
     private String frota;
     private String placaVeiculo;
     private String cor;
-    private Year anoDeFabricacao ;
+    private Year anoDeFabricacao;
 
     private Boolean ativo = true;
     private String motivoInativacao;
 
-    private Long  kilometragemAtual = 0L;
+    private Long kilometragemAtual = 0L;
+    private Long kmTrocaOleo = 0L;
+    private Long kmTrocaCorreiaDentada = 0L;
+    private Long kmCorretiva=0L;
+
+    private LocalDate dataUltimaCorretiva;
     private LocalDate dataProximaTrocaOleo;
-    private Long kmTrocaOleo= 0L;
-    private Long kmTrocaCorreiraDentada= 0L;
-    private LocalDate dataProximaCorreiraDentada;
+    private LocalDate dataProximaCorreiaDentada;
+
+    private LocalDate dataUltimaTrocaOleo;
+    private LocalDate dataUltimaCorreiaDentada;
 
     @Enumerated(EnumType.STRING)
     private TipoVeiculo tipoVeiculo;
@@ -44,6 +50,6 @@ public class Veiculo {
     private Base base;
 
     @OneToMany(mappedBy = "veiculo")
-    private List<Manutencao> manutencoes= new ArrayList<>();
+    private List<Manutencao> manutencoes = new ArrayList<>();
 
 }

@@ -69,11 +69,15 @@ export interface VeiculoResponse {
   anoDeFabricacao: string
   frota: string
   kmTrocaOleo: number | null
-  kmTrocaCorreiraDentada: number | null
+  kmTrocaCorreiaDentada: number | null
   tipoVeiculo: TipoVeiculo
   kilometragemAtual: number | null
   dataProximaTrocaOleo: string | null
-  dataProximaCorreiraDentada: string | null
+  dataProximaCorreiaDentada: string | null
+  dataUltimaTrocaOleo: string | null
+  dataUltimaCorreiaDentada: string | null
+  dataUltimaCorretiva: string | null
+  kmCorretiva: number | null
   base: BaseResponse
 }
 

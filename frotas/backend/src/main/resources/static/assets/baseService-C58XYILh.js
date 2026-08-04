@@ -1,1 +1,0 @@
-import{r as e}from"./index--3Yb_LVG.js";var t={async cadastrar(t){await e.post(`/base`,t)},async listarTodas(){return(await e.get(`/base`)).data},async atualizar(t,n){await e.put(`/base/${t}`,n)},async excluir(t){await e.delete(`/base/${t}`)}};export{t};

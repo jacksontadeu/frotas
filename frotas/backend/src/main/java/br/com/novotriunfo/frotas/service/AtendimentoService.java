@@ -42,6 +42,8 @@ public class AtendimentoService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A quilometragem informada não pode ser menor que a quilometragem atual do veículo");
             }
             veiculo.setKilometragemAtual(request.getKilometragem());
+            veiculo.setDataUltimaCorretiva(request.getDataRealizacao());
+            veiculo.setKmCorretiva(request.getKilometragem());
             manutencaoRepository.save(manutencao);
             veiculoRepository.save(veiculo);
         } else if (manutencaoOpt.get().getTipoManutencao().equals(TipoManutencao.PREVENTIVA_TROCA_DE_OLEO)) {
@@ -56,6 +58,7 @@ public class AtendimentoService {
             if (request.getKilometragem() < veiculo.getKilometragemAtual()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A quilometragem informada não pode ser menor que a quilometragem atual do veículo");
             }
+            veiculo.setDataUltimaTrocaOleo(request.getDataRealizacao());
             veiculo.setDataProximaTrocaOleo(request.getDataRealizacao().plusMonths(6));
             veiculo.setKilometragemAtual(request.getKilometragem());
             veiculo.setKmTrocaOleo(request.getKilometragem() + 10000L);
@@ -74,10 +77,10 @@ public class AtendimentoService {
             if (request.getKilometragem() < veiculo.getKilometragemAtual()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A quilometragem informada não pode ser menor que a quilometragem atual do veículo");
             }
-            veiculo.setDataProximaTrocaOleo(request.getDataRealizacao().plusMonths(6));
-            veiculo.setDataProximaCorreiraDentada(request.getDataRealizacao().plusMonths(24));
+            veiculo.setDataUltimaCorreiaDentada(request.getDataRealizacao());
+            veiculo.setDataProximaCorreiaDentada(request.getDataRealizacao().plusMonths(24));
             veiculo.setKilometragemAtual(request.getKilometragem());
-            veiculo.setKmTrocaCorreiraDentada(request.getKilometragem() + 50000L);
+            veiculo.setKmTrocaCorreiaDentada(request.getKilometragem() + 50000L);
             manutencaoRepository.save(manutencao);
             veiculoRepository.save(veiculo);
             cadastrarTrocaCorreiaDentada(veiculo, request);
