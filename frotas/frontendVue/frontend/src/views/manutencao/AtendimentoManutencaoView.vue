@@ -182,6 +182,16 @@ const formatarTipo = (tipo: string) => {
   return map[tipo.toLowerCase()] || tipo
 }
 
+function getServicosFiltrados(tipoManutencao?: string) {
+  if (!tipoManutencao) return SERVICOS_LIST
+  
+  return SERVICOS_LIST.filter(s => {
+    if (tipoManutencao === 'PREVENTIVA_TROCA_DE_OLEO' && s.value === 'KIT_CORREIA_DENTADA') return false
+    if (tipoManutencao === 'PREVENTIVA_KIT_CORREIA_DENTADA' && s.value === 'TROCA_DE_OLEO') return false
+    return true
+  })
+}
+
 onMounted(carregarManutencoes)
 </script>
 
@@ -373,7 +383,7 @@ onMounted(carregarManutencoes)
               <p class="checklist-subtitle">Selecione as manutenções efetuadas no veículo:</p>
               <div class="checklist-grid">
                 <label
-                  v-for="s in SERVICOS_LIST"
+                  v-for="s in getServicosFiltrados(m.tipoManutencao)"
                   :key="s.value"
                   class="checklist-item-tile"
                   :class="{ checked: isServicoSelecionado(s.value) }"
