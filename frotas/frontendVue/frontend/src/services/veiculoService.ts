@@ -51,4 +51,25 @@ export const veiculoService = {
       params: { veiculoId, baseId },
     })
   },
+
+  async gerarRelatorioDetalhado(veiculoIds: number[]): Promise<Blob> {
+    const response = await api.post('/relatorios/veiculos/detalhado', veiculoIds, {
+      responseType: 'blob'
+    })
+    return response.data
+  },
+
+  async gerarRelatorioListarTodos(): Promise<Blob> {
+    const response = await api.get('/relatorios/veiculos/listartodos', {
+      responseType: 'blob'
+    })
+    return response.data
+  },
+
+  async gerarRelatorioVeiculoDetalhado(id: number): Promise<Blob> {
+    const response = await api.get(`/relatorios/veiculos/${id}`, {
+      responseType: 'blob'
+    })
+    return response.data
+  }
 }

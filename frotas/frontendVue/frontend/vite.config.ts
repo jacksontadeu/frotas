@@ -23,6 +23,10 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      '/relatorios': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
       '/usuario': {
         target: 'http://localhost:8080',
         changeOrigin: true,

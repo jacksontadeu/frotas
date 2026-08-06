@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Relatório Detalhado de Veículo</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 12mm 15mm;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #1E293B;
+            margin: 0;
+            padding: 0;
+            font-size: 10.5px;
+            background-color: #FFFFFF;
+        }
+
+        .header-container {
+            width: 100%;
+            border-bottom: 3px solid #FF6600;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: none;
+        }
+
+        .header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        .logo-cell {
+            width: 30px;
+            text-align: center;
+        }
+
+        .logo-img {
+            max-width: 25px;
+            max-height: 25px;
+            display: block;
+        }
+
+        .company-info-cell {
+            padding-left: 30px;
+        }
+
+        .company-title {
+            color: #000000;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            margin: 0;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        .report-subtitle {
+            color: #64748B;
+            font-size: 11px;
+            font-weight: 500;
+            margin-top: 4px;
+        }
+
+        .group-section {
+            margin-bottom: 22px;
+            page-break-inside: avoid;
+        }
+
+        .base-header {
+            background-color: #000000;
+            color: #FFFFFF;
+            padding: 7px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 4px 4px 0 0;
+            margin-bottom: 0;
+            letter-spacing: 0.3px;
+        }
+
+        .base-header span.label {
+            color: #FF6600;
+            text-transform: uppercase;
+            font-size: 10px;
+            margin-right: 4px;
+        }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0;
+            border: 1px solid #E2E8F0;
+            border-top: none;
+        }
+
+        table.data-table th, table.data-table td {
+            border: 1px solid #E2E8F0;
+            padding: 7px 8px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        table.data-table th {
+            background-color: #F1F5F9;
+            color: #1E293B;
+            font-weight: 700;
+            font-size: 9.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            border-bottom: 2px solid #CBD5E1;
+        }
+
+        .plate-badge {
+            display: inline-block;
+            background-color: #F1F5F9;
+            border: 1px solid #94A3B8;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            color: #0F172A;
+            letter-spacing: 0.5px;
+        }
+
+        .vehicle-name {
+            font-weight: 600;
+            color: #0F172A;
+        }
+
+        .vehicle-type {
+            color: #64748B;
+            font-size: 9px;
+        }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+
+        .sub-info {
+            color: #FF6600;
+            font-size: 9px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .km-value {
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .manutencoes-container {
+            padding: 8px 15px 15px 15px;
+            background-color: #FAFAFA;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        .manutencoes-title {
+            font-size: 10px;
+            font-weight: bold;
+            color: #FF6600;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        table.manutencoes-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #E2E8F0;
+        }
+
+        table.manutencoes-table th, table.manutencoes-table td {
+            border: 1px solid #E2E8F0;
+            padding: 5px 6px;
+            font-size: 9px;
+            text-align: left;
+        }
+
+        table.manutencoes-table th {
+            background-color: #E2E8F0;
+            color: #475569;
+            font-weight: bold;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 8px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-em-aberto { background-color: #FEF3C7; color: #D97706; border: 1px solid #FDE68A; }
+        .status-finalizada { background-color: #DCFCE7; color: #166534; border: 1px solid #BBF7D0; }
+    </style>
+</head>
+<body>
+
+<div class="header-container">
+    <table class="header-table">
+        <tr>
+            <td class="logo-cell">
+                <img class="logo-img" th:src="${logoBase64}" alt="Logo" th:if="${logoBase64 != null and !logoBase64.isEmpty()}"/>
+            </td>
+            <td class="company-info-cell">
+                <div class="company-title">Centro Automotivo Novo Triunfo</div>
+                <div class="report-subtitle">Relatório Detalhado do Veículo</div>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div class="group-section">
+
+    <div class="base-header">
+        <span class="label">Base:</span>
+        <span th:text="${veiculo.base != null and veiculo.base.nome != null ? veiculo.base.nome : 'Sem Base Definida'}">Nome da Base</span>
+    </div>
+
+    <table class="data-table">
+        <thead>
+        <tr>
+            <th style="width: 13%;">Placa</th>
+            <th style="width: 27%;">Nome / Tipo</th>
+            <th style="width: 15%;">Frota</th>
+            <th style="width: 15%;" class="text-right">KM Atual</th>
+            <th style="width: 15%;" class="text-center">Próx. Troca Óleo</th>
+            <th style="width: 15%;" class="text-center">Próx. Correia</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr style="background-color: #F8FAFC;">
+            <td class="text-center">
+                <span class="plate-badge" th:text="${veiculo.placaVeiculo}">ABC-1234</span>
+            </td>
+            <td>
+                <div class="vehicle-name" th:text="${veiculo.nome}">Nome</div>
+                <div class="vehicle-type" th:text="${veiculo.tipoVeiculo}">Tipo</div>
+            </td>
+            <td th:text="${veiculo.frota}">Frota</td>
+            <td class="text-right km-value" th:text="${veiculo.kilometragemAtual != null ? veiculo.kilometragemAtual + ' KM' : '0 KM'}">0 KM</td>
+            <td class="text-center">
+                <span th:text="${veiculo.dataProximaTrocaOleo != null ? #temporals.format(veiculo.dataProximaTrocaOleo, 'dd/MM/yyyy') : '-'}">--/--/----</span>
+                <div class="sub-info" th:if="${veiculo.kmTrocaOleo != null}" th:text="${veiculo.kmTrocaOleo + ' KM'}"></div>
+            </td>
+            <td class="text-center">
+                <span th:text="${veiculo.dataProximaCorreiaDentada != null ? #temporals.format(veiculo.dataProximaCorreiaDentada, 'dd/MM/yyyy') : '-'}">--/--/----</span>
+                <div class="sub-info" th:if="${veiculo.kmTrocaCorreiaDentada != null}" th:text="${veiculo.kmTrocaCorreiaDentada + ' KM'}"></div>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="6" style="padding: 0; border: none;">
+                <div class="manutencoes-container">
+                    <div class="manutencoes-title">Histórico de Manutenções</div>
+                    <table class="manutencoes-table" th:if="${manutencoes != null and !manutencoes.isEmpty()}">
+                        <thead>
+                        <tr>
+                            <th style="width: 12%;">Data</th>
+                            <th style="width: 15%;">Nº Manut.</th>
+                            <th style="width: 23%;">Tipo</th>
+                            <th style="width: 15%;">KM</th>
+                            <th style="width: 25%;">Descrição</th>
+                            <th style="width: 10%;" class="text-center">Status</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="m : ${manutencoes}">
+                            <td th:text="${m.dataAgendamento != null ? #temporals.format(m.dataAgendamento, 'dd/MM/yyyy') : '-'}"></td>
+                            <td th:text="${m.numeroManutencao}"></td>
+                            <td th:text="${m.tipoManutencao}"></td>
+                            <td th:text="${m.kilometragem != null ? m.kilometragem + ' KM' : '-'}"></td>
+                            <td th:text="${m.descricao}"></td>
+                            <td class="text-center">
+                                <span class="status-badge" th:classappend="${m.status != null and m.status.name() == 'EM_ABERTO'} ? 'status-em-aberto' : 'status-finalizada'" th:text="${m.status}">STATUS</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <div th:if="${manutencoes == null or manutencoes.isEmpty()}" style="font-size: 9px; color: #64748B; font-style: italic;">
+                        Nenhuma manutenção registrada para este veículo.
+                    </div>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+</div>
+
+</body>
+</html>

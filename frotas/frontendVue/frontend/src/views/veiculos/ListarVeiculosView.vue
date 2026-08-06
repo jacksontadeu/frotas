@@ -12,6 +12,7 @@ const veiculos = ref<VeiculoResponse[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const deletingId = ref<number | null>(null)
+const gerandoRelatorio = ref(false)
 
 // Modal
 const showModal = ref(false)
@@ -112,10 +113,18 @@ function fecharDetalhes() {
   veiculoDetalhes.value = null
 }
 
-function imprimirDetalhes() {
-  document.body.classList.add('printing-modal-active')
-  window.print()
-  document.body.classList.remove('printing-modal-active')
+async function imprimirDetalhes() {
+  if (!veiculoDetalhes.value) return
+  try {
+    const blob = await veiculoService.gerarRelatorioVeiculoDetalhado(veiculoDetalhes.value.id)
+    const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }))
+    window.open(url, '_blank')
+  } catch (err: any) {
+    console.error('Erro ao gerar relatório', err)
+    modalType.value = 'error'
+    modalMessage.value = 'Erro ao gerar o relatório detalhado do veículo. Tente novamente.'
+    showModal.value = true
+  }
 }
 
 const manutencoesDoVeiculoSelecionado = computed(() => {
@@ -283,6 +292,22 @@ const gruposPorBase = computed(() => {
   return grupos
 })
 
+async function gerarRelatorioDetalhado() {
+  try {
+    gerandoRelatorio.value = true
+    const blob = await veiculoService.gerarRelatorioListarTodos()
+    const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }))
+    window.open(url, '_blank')
+  } catch (err: any) {
+    console.error('Erro ao gerar relatório', err)
+    modalType.value = 'error'
+    modalMessage.value = 'Erro ao gerar o relatório. Tente novamente.'
+    showModal.value = true
+  } finally {
+    gerandoRelatorio.value = false
+  }
+}
+
 onMounted(carregarVeiculos)
 </script>
 
@@ -324,6 +349,14 @@ onMounted(carregarVeiculos)
             Lista
           </button>
         </div>
+        <button
+          class="btn btn-secondary"
+          @click="gerarRelatorioDetalhado"
+          :disabled="gerandoRelatorio || veiculosFiltrados.length === 0"
+          style="margin-right: 12px; background-color: #f97316; color: white; border: none;"
+        >
+          {{ gerandoRelatorio ? 'Gerando...' : '📄 Gerar PDF Detalhado' }}
+        </button>
         <RouterLink to="/cadastros/cadastrar-veiculo" class="btn btn-primary">
           + Novo Veículo
         </RouterLink>

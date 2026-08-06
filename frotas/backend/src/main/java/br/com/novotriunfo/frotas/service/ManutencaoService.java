@@ -63,6 +63,16 @@ public class ManutencaoService {
         return responses;
     }
 
+    public List<ManutencaoDTOResponse> buscarPorIds(List<Long> ids) {
+        List<Manutencao> manutencoes = manutencaoRepository.findAllById(ids);
+        return modelMapper.map(manutencoes, new TypeToken<List<ManutencaoDTOResponse>>() {}.getType());
+    }
+
+    public List<ManutencaoDTOResponse> buscarPorVeiculoId(List<Long> veiculoIds) {
+        List<Manutencao> manutencoes = manutencaoRepository.findByVeiculoIdIn(veiculoIds);
+        return modelMapper.map(manutencoes, new TypeToken<List<ManutencaoDTOResponse>>() {}.getType());
+    }
+
     public List<ManutencaoDTOResponse> listarPorStatus(StatusManutencao status) {
         List<Manutencao> manutencoes = manutencaoRepository.findByStatus(status);
         List<ManutencaoDTOResponse> responses = modelMapper.map(manutencoes,

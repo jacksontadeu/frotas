@@ -8,6 +8,7 @@ import { SERVICOS_LIST } from '../../types'
 const manutencoes = ref<ManutencaoResponse[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
+const gerandoRelatorio = ref(false)
 
 // ── Modal de Detalhes ─────────────────────────────────────────────────────────
 const manutencaoSelecionada = ref<ManutencaoResponse | null>(null)
@@ -21,10 +22,16 @@ function fecharModal() {
 }
 
 // ── Função para Imprimir/Gerar PDF Apenas da Modal ───────────────────────────
-function imprimirDetalhes() {
-  document.body.classList.add('printing-modal-active')
-  window.print()
-  document.body.classList.remove('printing-modal-active')
+async function imprimirDetalhes() {
+  if (!manutencaoSelecionada.value) return
+  try {
+    const blob = await manutencaoService.gerarRelatorioManutencaoDetalhada(manutencaoSelecionada.value.id)
+    const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }))
+    window.open(url, '_blank')
+  } catch (err: any) {
+    console.error('Erro ao gerar relatório', err)
+    alert('Erro ao gerar o relatório detalhado da manutenção. Tente novamente.')
+  }
 }
 
 // ── Modo de visualização ──────────────────────────────────────────────────────
@@ -144,6 +151,20 @@ const formatarTipo = (tipo: string) => {
 
 const getServicoInfo = (servico: Servico) => SERVICOS_LIST.find((s) => s.value === servico)
 
+async function gerarRelatorioDetalhado() {
+  try {
+    gerandoRelatorio.value = true
+    const blob = await manutencaoService.gerarRelatorioListarTodas()
+    const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }))
+    window.open(url, '_blank')
+  } catch (err: any) {
+    console.error('Erro ao gerar relatório', err)
+    alert('Erro ao gerar o relatório. Tente novamente.')
+  } finally {
+    gerandoRelatorio.value = false
+  }
+}
+
 onMounted(carregarManutencoes)
 </script>
 
@@ -187,6 +208,14 @@ onMounted(carregarManutencoes)
           </button>
         </div>
 
+        <button
+          class="btn btn-secondary"
+          @click="gerarRelatorioDetalhado"
+          :disabled="gerandoRelatorio || manutencoesFiltradas.length === 0"
+          style="margin-right: 12px; background-color: #f97316; color: white; border: none;"
+        >
+          {{ gerandoRelatorio ? 'Gerando...' : '📄 Gerar Relatório PDF' }}
+        </button>
         <RouterLink to="/cadastros/cadastrar-manutencao" class="btn btn-primary">
           + Registrar Manutenção
         </RouterLink>

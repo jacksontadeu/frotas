@@ -55,6 +55,11 @@ public class VeiculoService {
         return veiculosDTO;
     }
 
+    public List<VeiculoDTOResponse> buscarPorIds(List<Long> ids) {
+        List<Veiculo> veiculos = veiculoRepository.findAllById(ids);
+        return modelMapper.map(veiculos, new TypeToken<List<VeiculoDTOResponse>>(){}.getType());
+    }
+
     public VeiculoDTOResponse buscarPorId(Long id) {
         Optional<Veiculo> veiculo = veiculoRepository.findById(id);
         if (veiculo.isPresent()) {

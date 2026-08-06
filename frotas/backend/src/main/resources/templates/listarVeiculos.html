@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Relatório de Veículos por Base</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 12mm 15mm;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #1E293B;
+            margin: 0;
+            padding: 0;
+            font-size: 10.5px;
+            background-color: #FFFFFF;
+        }
+
+        /* Cabeçalho principal com Logo e Nome da Empresa */
+        .header-container {
+            width: 100%;
+            border-bottom: 3px solid #FF6600;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: none;
+        }
+
+        .header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        .logo-cell {
+            width: 30px; /* Reduzido ainda mais */
+            text-align: center;
+        }
+
+        .logo-img {
+            max-width: 25px;  /* Logo menor ainda */
+            max-height: 25px;
+            display: block;
+        }
+
+        .company-info-cell {
+            padding-left: 30px; /* Espaçamento maior entre a logo e o texto */
+        }
+
+        .company-title {
+            color: #000000; /* Preto corporativo */
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            margin: 0;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        .report-subtitle {
+            color: #64748B;
+            font-size: 11px;
+            font-weight: 500;
+            margin-top: 4px;
+        }
+
+        /* Seções agrupadas por Base */
+        .group-section {
+            margin-bottom: 22px;
+            page-break-inside: avoid;
+        }
+
+        .base-header {
+            background-color: #000000;
+            color: #FFFFFF;
+            padding: 7px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 4px 4px 0 0;
+            margin-bottom: 0;
+            letter-spacing: 0.3px;
+        }
+
+        .base-header span.label {
+            color: #FF6600;
+            text-transform: uppercase;
+            font-size: 10px;
+            margin-right: 4px;
+        }
+
+        /* Tabela de veículos */
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0;
+            border: 1px solid #E2E8F0;
+            border-top: none;
+        }
+
+        table.data-table th, table.data-table td {
+            border: 1px solid #E2E8F0;
+            padding: 7px 8px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        table.data-table th {
+            background-color: #F1F5F9;
+            color: #1E293B;
+            font-weight: 700;
+            font-size: 9.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            border-bottom: 2px solid #CBD5E1;
+        }
+
+        table.data-table tr:nth-child(even) {
+            background-color: #F8FAFC;
+        }
+
+        table.data-table tr {
+            page-break-inside: avoid;
+        }
+
+        .plate-badge {
+            display: inline-block;
+            background-color: #F1F5F9;
+            border: 1px solid #94A3B8;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            color: #0F172A;
+            letter-spacing: 0.5px;
+        }
+
+        .vehicle-name {
+            font-weight: 600;
+            color: #0F172A;
+        }
+
+        .vehicle-type {
+            color: #64748B;
+            font-size: 9px;
+        }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+
+        .sub-info {
+            color: #FF6600;
+            font-size: 9px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .km-value {
+            font-weight: 600;
+            color: #334155;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Cabeçalho com Logo e Nome da Empresa -->
+<div class="header-container">
+    <table class="header-table">
+        <tr>
+            <td class="logo-cell">
+                <img class="logo-img" th:src="${logoBase64}" alt="Logo" th:if="${logoBase64 != null and !logoBase64.isEmpty()}"/>
+            </td>
+            <td class="company-info-cell">
+                <div class="company-title">Centro Automotivo Novo Triunfo</div>
+                <div class="report-subtitle">Relatório de Manutenção e Controle da Frota por Base</div>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<!-- Agrupamento por Base -->
+<div class="group-section" th:each="entry : ${veiculosPorBase}">
+
+    <!-- Nome da Base -->
+    <div class="base-header">
+        <span class="label">Base:</span>
+        <span th:text="${entry.key != null ? entry.key : 'Sem Base Definida'}">Nome da Base</span>
+    </div>
+
+    <!-- Tabela dos veículos daquela Base -->
+    <table class="data-table">
+        <thead>
+        <tr>
+            <th style="width: 13%;">Placa</th>
+            <th style="width: 27%;">Nome / Tipo</th>
+            <th style="width: 15%;">Frota</th>
+            <th style="width: 15%;" class="text-right">KM Atual</th>
+            <th style="width: 15%;" class="text-center">Próx. Troca Óleo</th>
+            <th style="width: 15%;" class="text-center">Próx. Correia</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="v : ${entry.value}">
+            <td class="text-center">
+                <span class="plate-badge" th:text="${v.placaVeiculo}">ABC-1234</span>
+            </td>
+            <td>
+                <div class="vehicle-name" th:text="${v.nome}">Nome</div>
+                <div class="vehicle-type" th:text="${v.tipoVeiculo}">Tipo</div>
+            </td>
+            <td th:text="${v.frota}">Frota</td>
+            <td class="text-right km-value" th:text="${v.kilometragemAtual != null ? v.kilometragemAtual + ' KM' : '0 KM'}">0 KM</td>
+            <td class="text-center">
+                <span th:text="${v.dataProximaTrocaOleo != null ? #temporals.format(v.dataProximaTrocaOleo, 'dd/MM/yyyy') : '-'}">--/--/----</span>
+                <div class="sub-info" th:if="${v.kmTrocaOleo != null}" th:text="${v.kmTrocaOleo + ' KM'}"></div>
+            </td>
+            <td class="text-center">
+                <span th:text="${v.dataProximaCorreiaDentada != null ? #temporals.format(v.dataProximaCorreiaDentada, 'dd/MM/yyyy') : '-'}">--/--/----</span>
+                <div class="sub-info" th:if="${v.kmTrocaCorreiaDentada != null}" th:text="${v.kmTrocaCorreiaDentada + ' KM'}"></div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+</div>
+
+</body>
+</html>

@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface ManutencaoRepository extends JpaRepository<Manutencao, Long> {
     List<Manutencao> findByStatus(StatusManutencao status);
+    List<Manutencao> findByVeiculoIdIn(List<Long> veiculoIds);
 }

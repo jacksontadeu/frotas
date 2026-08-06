@@ -68,6 +68,7 @@ public class SecurityConfiguration {
                         .requestMatchers("/veiculo", "/veiculo/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/base", "/base/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/cadastros/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/relatorios/**").permitAll()
 
                         // Qualquer outra requisição precisa estar autenticada
                         .anyRequest().authenticated()
