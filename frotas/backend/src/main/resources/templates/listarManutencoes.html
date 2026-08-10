@@ -237,9 +237,20 @@
             <td th:text="${m.tipoManutencao}">Tipo</td>
             <td class="text-right km-value" th:text="${m.kilometragem != null ? m.kilometragem + ' KM' : '-'}">0 KM</td>
             <td class="desc-cell">
-                <span th:if="${m.servicos == null or m.servicos.isEmpty()}">-</span>
-                <span th:each="s, iterStat : ${m.servicos}">
-                    <span th:text="${s}">Serviço</span><span th:if="${!iterStat.last}">, </span>
+                <!-- Nenhum dado disponível (nem lista de serviços, nem descrição) -->
+                <span th:if="${(m.servicos == null or m.servicos.isEmpty()) and (m.descricao == null or m.descricao.isEmpty())}">-</span>
+
+                <!-- Lista de serviços (ex: manutenções preventivas) -->
+                <span th:if="${m.servicos != null and !m.servicos.isEmpty()}">
+                    <span th:each="s, iterStat : ${m.servicos}">
+                        <span th:text="${s}">Serviço</span><span th:if="${!iterStat.last}">, </span>
+                    </span>
+                </span>
+
+                <!-- Descrição única (ex: manutenções corretivas) -->
+                <span th:if="${(m.servicos == null or m.servicos.isEmpty()) and m.descricao != null and !m.descricao.isEmpty()}"
+                      th:text="${m.descricao}">
+                    Descrição
                 </span>
             </td>
             <td class="text-center">

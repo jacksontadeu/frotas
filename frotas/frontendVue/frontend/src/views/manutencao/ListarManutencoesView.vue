@@ -35,7 +35,7 @@ async function imprimirDetalhes() {
 }
 
 // ── Modo de visualização ──────────────────────────────────────────────────────
-type ViewMode = 'cards' | 'list'
+type ViewMode = 'cards' | 'list' | 'calendar'
 const viewMode = ref<ViewMode>(
   (localStorage.getItem('manutencoes-view-mode') as ViewMode) ?? 'cards'
 )
@@ -110,6 +110,50 @@ const manutencoesFiltradas = computed(() => {
     }
     return true
   })
+})
+
+// ── Lógica do Calendário ──────────────────────────────────────────────────────
+const currentDate = ref(new Date())
+const calendarMonth = computed(() => currentDate.value.getMonth())
+const calendarYear = computed(() => currentDate.value.getFullYear())
+
+const monthNames = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+]
+const currentMonthName = computed(() => monthNames[calendarMonth.value])
+
+function prevMonth() {
+  currentDate.value = new Date(calendarYear.value, calendarMonth.value - 1, 1)
+}
+
+function nextMonth() {
+  currentDate.value = new Date(calendarYear.value, calendarMonth.value + 1, 1)
+}
+
+const calendarDays = computed(() => {
+  const year = calendarYear.value
+  const month = calendarMonth.value
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+  
+  const days = []
+  
+  for (let i = 0; i < firstDay.getDay(); i++) {
+    days.push(null)
+  }
+  
+  for (let i = 1; i <= lastDay.getDate(); i++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`
+    const manuts = manutencoesFiltradas.value.filter(m => m.dataAgendamento === dateStr)
+    days.push({
+      dayNumber: i,
+      date: dateStr,
+      manutencoes: manuts
+    })
+  }
+  
+  return days
 })
 
 // ── Agrupamento por Base ──────────────────────────────────────────────────────
@@ -206,6 +250,24 @@ onMounted(carregarManutencoes)
             </svg>
             Lista
           </button>
+          <button
+            :class="['view-toggle-btn', { active: viewMode === 'calendar' }]"
+            @click="setViewMode('calendar')"
+            title="Visualização em calendário"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="1" y="1" width="4" height="4" rx="1"/>
+              <rect x="6" y="1" width="4" height="4" rx="1"/>
+              <rect x="11" y="1" width="4" height="4" rx="1"/>
+              <rect x="1" y="6" width="4" height="4" rx="1"/>
+              <rect x="6" y="6" width="4" height="4" rx="1"/>
+              <rect x="11" y="6" width="4" height="4" rx="1"/>
+              <rect x="1" y="11" width="4" height="4" rx="1"/>
+              <rect x="6" y="11" width="4" height="4" rx="1"/>
+              <rect x="11" y="11" width="4" height="4" rx="1"/>
+            </svg>
+            Calendário
+          </button>
         </div>
 
         <button
@@ -292,6 +354,49 @@ onMounted(carregarManutencoes)
       <span class="empty-state-icon">🔍</span>
       <p>Nenhuma manutenção encontrada com os filtros aplicados.</p>
       <button class="btn btn-secondary" @click="limparFiltros">Limpar filtros</button>
+    </div>
+
+    <!-- ── CALENDÁRIO ── -->
+    <div v-else-if="viewMode === 'calendar'" class="calendar-container">
+      <div class="calendar-header">
+        <button class="btn btn-sm btn-secondary" @click="prevMonth">◀ Anterior</button>
+        <h2 class="calendar-month">{{ currentMonthName }} {{ calendarYear }}</h2>
+        <button class="btn btn-sm btn-secondary" @click="nextMonth">Próximo ▶</button>
+      </div>
+      
+      <div class="calendar-grid">
+        <div class="calendar-day-header">Dom</div>
+        <div class="calendar-day-header">Seg</div>
+        <div class="calendar-day-header">Ter</div>
+        <div class="calendar-day-header">Qua</div>
+        <div class="calendar-day-header">Qui</div>
+        <div class="calendar-day-header">Sex</div>
+        <div class="calendar-day-header">Sáb</div>
+        
+        <div 
+          v-for="(day, index) in calendarDays" 
+          :key="index" 
+          class="calendar-day-cell"
+          :class="{ 'empty-cell': !day }"
+        >
+          <template v-if="day">
+            <div class="calendar-day-number">{{ day.dayNumber }}</div>
+            <div class="calendar-events">
+              <div 
+                v-for="m in day.manutencoes" 
+                :key="m.id"
+                class="calendar-event clickable"
+                :class="{ 'event-corretiva': m.tipoManutencao === 'CORRETIVA' }"
+                @click="abrirDetalhes(m)"
+                :title="m.veiculo.nome + ' - ' + m.veiculo.placaVeiculo"
+              >
+                <div class="event-placa">{{ m.veiculo.placaVeiculo }}</div>
+                <div class="event-base">{{ m.veiculo.base?.nome || 'Sem base' }}</div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
     </div>
 
     <!-- ── GRUPOS POR BASE ── -->
@@ -1198,5 +1303,114 @@ onMounted(carregarManutencoes)
     align-items: flex-start;
     gap: 0.25rem;
   }
+}
+
+/* ── Calendário ── */
+.calendar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.calendar-month {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.calendar-day-header {
+  background: var(--color-surface-2);
+  padding: 0.75rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.calendar-day-cell {
+  background: var(--color-surface);
+  min-height: 120px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.calendar-day-cell.empty-cell {
+  background: var(--color-surface-2);
+}
+
+.calendar-day-number {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  align-self: flex-end;
+}
+
+.calendar-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.calendar-event {
+  background: rgba(16, 185, 129, 0.15); /* Verde por padrão (preventiva) */
+  border-left: 3px solid var(--color-success);
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  transition: transform 0.15s ease;
+}
+
+.calendar-event:hover {
+  transform: scale(1.02);
+  cursor: pointer;
+}
+
+.calendar-event.event-corretiva {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-left: 3px solid var(--color-danger) !important;
+  color: var(--color-danger) !important;
+}
+
+.calendar-event.event-corretiva .event-placa {
+  color: var(--color-danger) !important;
+}
+
+.event-placa {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.event-base {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

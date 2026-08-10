@@ -43,7 +43,7 @@ public class VeiculoService {
         veiculo.setTipoVeiculo(TipoVeiculo.valueOf(request.getTipoVeiculo()));
         veiculo.setCor(request.getCor());
         veiculo.setAnoDeFabricacao(Year.parse(String.valueOf(request.getAnoDeFabricacao())));
-        veiculo.setNome(request.getNome());
+        veiculo.setNome(request.getNome().toUpperCase());
         veiculo.setFrota(request.getFrota());
         veiculoRepository.save(veiculo);
     }
